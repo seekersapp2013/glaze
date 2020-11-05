@@ -1,0 +1,6 @@
+plugin:
+    name: 'spot.project::lang.plugin.name'
+    description: 'spot.project::lang.plugin.description'
+    author: spot
+    icon: oc-icon-sitemap
+    homepage: ''

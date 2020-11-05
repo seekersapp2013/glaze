@@ -1,0 +1,215 @@
+title = "My Profile"
+url = "/dashboard/account/:page?"
+layout = "admin"
+description = "Account settings and more"
+is_hidden = 0
+role = 0
+permission = 0
+anonymous_only = 0
+logged_only = 1
+child_of = "dashboard/dashboard"
+hide_crumb = 0
+remove_crumb_trail = 0
+crumb_disabled = 0
+
+[viewBag]
+
+[imageUploader avatar]
+placeholderText = "Click or drag images to upload"
+maxSize = 5
+fileTypes = ".gif,.jpg,.jpeg,.png"
+imageWidth = 100
+imageHeight = 100
+imageMode = "crop"
+modelClass = "RainLab\User\Models\User"
+modelKeyColumn = "avatar"
+deferredBinding = 0
+==
+<?php
+function onInit(){
+    $this->avatar->bindModel('avatar', Auth::getUser());
+}
+function onStart(){
+    //$this['today']  = \Spot\Shipment\Models\Task::where('due_date', '=<', \Carbon\Carbon::now()->toDateString())->get();
+    //$this['week']   = \Spot\Shipment\Models\Task::where('due_date', '>', \Carbon\Carbon::now()->addWeek()->toDateString())->where('due_date', '=<', \Carbon\Carbon::now()->addWeeks(2)->toDateString())->get();
+    //$this['month']   = \Spot\Shipment\Models\Task::where('due_date', '>', \Carbon\Carbon::now()->addWeeks(2)->toDateString())->where('due_date', '=<', \Carbon\Carbon::now()->addWeeks(2)->addMonth()->toDateString())->get();
+
+
+    $this['item']           =   \RainLab\User\Models\User::find(Auth::getUser()->id);
+    $this['permissions']    =   \Spot\UserPermissions\Models\Permission::get();
+    //$this['countries']      =   \RainLab\Location\Models\Country::where('is_enabled', 1)->get();
+    $this['groups']         =   \RainLab\User\Models\UserGroup::get();
+    $this['roles']          =   \Vdomah\Roles\Models\Role::where('id', '!=', 5)->get();
+
+
+}
+function onSave()
+{
+    $data = post();
+    $item                   = \RainLab\User\Models\User::find(Auth::getUser()->id);
+    $item->name             = htmlspecialchars($data['name']);
+    $item->email            = htmlspecialchars($data['email']);
+    if(isset($data['password']) && $data['password'] != null && !empty($data['password']) && $data['password'] != ''){
+        if(isset($data['password_confirmation']) && $data['password_confirmation'] != null && !empty($data['password_confirmation']) && $data['password_confirmation'] != '' && $data['password_confirmation'] == $data['password']){
+            $password                       = \Hash::make($data['password']);
+            $item->password                 = $password;
+            $item->password_confirmation    = $password;
+        }
+    }
+    $item->mobile           = (($data['mobile'] != '') ? htmlspecialchars($data['mobile']) : null);
+    $item->phone            = (($data['phone'] != '') ? htmlspecialchars($data['phone']) : null);
+    $item->updated_at       = \Carbon\Carbon::now();
+    $item->update();
+
+    if(isset($data['password']) && $data['password'] != null && !empty($data['password']) && $data['password'] != ''){
+        if(isset($data['password_confirmation']) && $data['password_confirmation'] != null && !empty($data['password_confirmation']) && $data['password_confirmation'] != '' && $data['password_confirmation'] == $data['password']){
+            \RainLab\User\Models\User::where('id', $item->id)->update(['password' => \Hash::make($data['password']) ]);
+        }
+    }
+
+
+    \Flash::success($this['theme_lang']['updated_successfully']);
+    return Redirect::to('dashboard/account/edit');
+}
+?>
+==
+<!--Begin::App-->
+<div class="kt-grid kt-grid--desktop kt-grid--ver kt-grid--ver-desktop kt-app">
+    {% partial 'profilemenu' %}
+
+    <!--Begin:: App Content-->
+    <div class="kt-grid__item kt-grid__item--fluid kt-app__content">
+        {% if this.param.page == 'edit' %}
+            <div class="row">
+                <div class="col-xl-12">
+                    <div class="kt-portlet">
+                        <div class="kt-portlet__head">
+                            <div class="kt-portlet__head-label">
+                                <h3 class="kt-portlet__head-title">{{'Personal Information'|__}} <small>{{'update your personal informaiton'|__}}</small></h3>
+                            </div>
+                        </div>
+
+                        {{ form_ajax('onSave', { id: 'kt_form', class:'kt-form kt-form--label-right' }) }}
+                            <div class="kt-portlet__body">
+                                <div class="kt-section kt-section--first">
+                                    <div class="kt-section__body">
+                                        <div class="form-group row">
+                                            <label class="col-xl-3 col-lg-3 col-form-label">{{'Avatar'|__}}</label>
+                                            <div class="col-lg-9 col-xl-6">
+                                                  <div class="kt-avatar kt-avatar--outline" id="kt_user_avatar">
+                                                      {% partial avatar ~ '::image-single' %}
+                                                  </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group row">
+                                            <label class="col-xl-3 col-lg-3 col-form-label">{{'Full Name'|__}}&nbsp;<span class="kt-badge kt-badge--danger kt-badge--dot"></span></label>
+                                            <div class="col-lg-9 col-xl-6">
+                                                   <input type="text" class="form-control" name="name" value="{{item.name}}" required />
+                                            </div>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-xl-3 col-lg-3 col-form-label">{{'Email'|__}}&nbsp;<span class="kt-badge kt-badge--danger kt-badge--dot"></span></label>
+                                            <div class="col-lg-9 col-xl-6">
+                                                <input type="email" class="form-control" name="email" value="{{item.email}}" required />
+                                            </div>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-xl-3 col-lg-3 col-form-label">{{'Password'|__}}</label>
+                                            <div class="col-lg-9 col-xl-6">
+                                                <input type="password" class="form-control" name="password" />
+                                                <span class="text-muted">{{'Only fill it if you need to change your password'|__}}</span>
+                                            </div>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-xl-3 col-lg-3 col-form-label">{{'Password Confirmation'|__}}</label>
+                                            <div class="col-lg-9 col-xl-6">
+                                                <input type="password" class="form-control" name="password_confirmation" />
+                                            </div>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-xl-3 col-lg-3 col-form-label">{{'Mobile Number'|__}}</label>
+                                            <div class="col-lg-9 col-xl-6">
+                                                <input type="text" class="form-control" name="mobile"  value="{{item.mobile}}"/>
+                                            </div>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-xl-3 col-lg-3 col-form-label">{{'Phone Number'|__}}</label>
+                                            <div class="col-lg-9 col-xl-6">
+                                                <input type="text" class="form-control" name="phone"  value="{{item.phone}}"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                            <div class="kt-portlet__foot">
+                                <div class="kt-form__actions">
+                                    <div class="row">
+                                        <div class="col-lg-3 col-xl-3">
+                                        </div>
+                                        <div class="col-lg-9 col-xl-9">
+                                					<button type="submit" class="btn btn-primary">{{'Save'|__}}</button>
+                                					<span class="kt-margin-left-10">{{'or'|__}} <a href="{{url('dashboard/account')}}" class="kt-link">{{'Cancel'|__}}</a></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {{ form_close() }}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    <!--End:: App Content-->
+</div>
+<!--End::App-->
+
+
+{% put styles %}
+    <style>
+        .map_canvas {
+          height: 350px;
+        }
+    </style>
+{% endput %}
+{% put scripts %}
+<script>
+"use strict";
+// Class definition
+var KTUserProfile = function () {
+	// Base elements
+	var avatar;
+	var offcanvas;
+
+	// Private functions
+	var initAside = function () {
+		// Mobile offcanvas for mobile mode
+		offcanvas = new KTOffcanvas('kt_user_profile_aside', {
+            overlay: true,
+            baseClass: 'kt-app__aside',
+            closeBy: 'kt_user_profile_aside_close',
+            toggleBy: 'kt_subheader_mobile_toggle'
+        });
+        $('#kt_subheader_mobile_toggle').show();
+	}
+
+	var initUserForm = function() {
+		avatar = new KTAvatar('kt_user_avatar');
+	}
+
+	return {
+		// public functions
+		init: function() {
+			initAside();
+			initUserForm();
+		}
+	};
+}();
+
+KTUtil.ready(function() {
+	KTUserProfile.init();
+
+});
+</script>
+{% endput %}

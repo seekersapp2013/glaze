@@ -1,0 +1,1657 @@
+title = "Settings"
+url = "/dashboard/settings/:page?"
+layout = "admin"
+description = "System Configuration"
+is_hidden = 0
+role = 0
+permission = 0
+anonymous_only = 0
+logged_only = 1
+child_of = "dashboard/dashboard"
+menu_breadcrumb = "setting"
+hide_crumb = 0
+remove_crumb_trail = 0
+crumb_disabled = 0
+
+[viewBag]
+
+[imageUploader Logo]
+placeholderText = "Click or drag images to upload"
+maxSize = 5
+fileTypes = ".gif,.jpg,.jpeg,.png,.svg"
+imageWidth = 100
+imageHeight = 100
+imageMode = "crop"
+modelClass = "Spot\Shipment\Models\Settings"
+modelKeyColumn = "logo"
+identifierValue = "3"
+deferredBinding = 0
+
+[imageUploader MobileLogo]
+placeholderText = "Click or drag images to upload"
+maxSize = 5
+fileTypes = ".gif,.jpg,.jpeg,.png,.svg"
+imageWidth = 100
+imageHeight = 100
+imageMode = "crop"
+modelClass = "Spot\Shipment\Models\Settings"
+modelKeyColumn = "mobile_logo"
+identifierValue = "3"
+deferredBinding = 0
+
+[imageUploader Favicon]
+placeholderText = "Click or drag images to upload"
+maxSize = 5
+fileTypes = ".gif,.jpg,.jpeg,.png,.ico"
+imageWidth = 100
+imageHeight = 100
+imageMode = "crop"
+modelClass = "Spot\Shipment\Models\Settings"
+modelKeyColumn = "favicon"
+identifierValue = "3"
+deferredBinding = 0
+==
+<?php
+use \Responsiv\Currency\Models\Currency;
+use \Spot\Shipment\Models\Settings;
+function onInit(){
+    $setting =   \Spot\Shipment\Models\Settings::where('item','acme_demo_settings')->first();
+    $this->Logo->bindModel('logo', $setting);
+    $this->MobileLogo->bindModel('mobile_logo', $setting);
+    $this->Favicon->bindModel('favicon', $setting);
+}
+function onStart(){
+    if(!Auth::getUser()->hasUserPermission(["setting"],'r')) {
+        \Flash::error($this['theme_lang']['not_allowed']);
+        return Redirect::to('dashboard');
+    }
+    if($this->param('page') == 'general' || !$this->param('page')){
+        $this['currencies']         =   Currency::select('name','id','is_primary')->get();
+        $this['primary_currency']   =   Currency::where('is_primary', 1)->first();
+        $this['language']           =   Settings::get('language', true);
+        $this['timezone_offset']    =   Settings::get('timezone_offset', true);
+        $this['dateformat']         =   Settings::get('dateformat', true);
+    }elseif($this->param('page') == 'company'){
+        $this['company']            =   Settings::get('company', true);
+    }elseif($this->param('page') == 'google'){
+        $this->page->settings_breadcrumb       =   'components';
+        $this['google']             =   Settings::get('google', true);
+    }elseif($this->param('page') == 'departments'){
+        if(!Auth::getUser()->hasUserPermission(["departments"],'r')) {
+            \Flash::error($this['theme_lang']['not_allowed']);
+            return Redirect::to('dashboard/settings');
+        }
+        $this->page->settings_breadcrumb       =   'employees';
+        $this->page->listing        = true;
+        if(Auth::getUser()->hasUserPermission(["departments"],'c')){
+            $this->page->actions   = array(
+                'add'   =>  url('dashboard/settings/departments/create')
+            );
+        }
+    }elseif($this->param('page') == 'employees'){
+        if(!Auth::getUser()->hasUserPermission(["employees"],'r')) {
+            \Flash::error($this['theme_lang']['not_allowed']);
+            return Redirect::to('dashboard/settings');
+        }
+        $this->page->settings_breadcrumb       =   'employees';
+        $this->page->listing        = true;
+        if(Auth::getUser()->hasUserPermission(["employees"],'c')){
+            $this->page->actions   = array(
+                'add'   =>  url('dashboard/settings/employees/create')
+            );
+        }
+    }elseif($this->param('page') == 'languages'){
+        if(!Auth::getUser()->hasUserPermission(["languages"],'r')) {
+            \Flash::error($this['theme_lang']['not_allowed']);
+            return Redirect::to('dashboard/settings');
+        }
+        $this->page->settings_breadcrumb       =   'languages';
+        $this['languages']          =   RainLab\Translate\Models\Locale::get();
+
+        $this->page->listing        = true;
+        if(Auth::getUser()->hasUserPermission(["languages"],'c')){
+            $this->page->actions   = array(
+                'add'   =>  url('dashboard/settings/languages/create')
+            );
+        }
+    }elseif($this->param('page') == 'translate'){
+        if(!Auth::getUser()->hasUserPermission(["languages"],'r')) {
+            \Flash::error($this['theme_lang']['not_allowed']);
+            return Redirect::to('dashboard/settings');
+        }
+        \System\Helpers\Cache::clear();
+        $this->page->settings_breadcrumb       =   'languages';
+        $this['languages']          =   RainLab\Translate\Models\Locale::get();
+        $this['messages']           =   RainLab\Translate\Models\Message::all();
+    }elseif($this->param('page') == 'backup'){
+        if(!Auth::getUser()->hasUserPermission(["backups"],'r')) {
+            \Flash::error($this['theme_lang']['not_allowed']);
+            return Redirect::to('dashboard/settings');
+        }
+        $this->page->settings_breadcrumb       =   'backup';
+        if(Auth::getUser()->hasUserPermission(["backups"],'c')) {
+            $this->page->actions   = array(
+                'buttons'   =>  array(
+                    array(
+                        'id'    =>  'database',
+                        'title' =>  $this['theme_lang']['create_database_backup'],
+                        'url'   =>  'javascript:void(0);'
+                    ),
+                    array(
+                        'id'    =>  'files',
+                        'title' =>  $this['theme_lang']['create_files_backup'],
+                        'url'   =>  'javascript:void(0);'
+                    ),
+                    array(
+                        'id'    =>  'whole',
+                        'title' =>  $this['theme_lang']['create_system_backup'],
+                        'url'   =>  'javascript:void(0);'
+                    ),
+                )
+            );
+        }
+    }
+}
+public function onBackup()
+{
+    \Flash::error($this['theme_lang']['not_allowed']);
+
+    $data   = post();
+    if($data['type'] == 'db'){
+        $artisanArguments = ['--disable-notifications' => true, '--only-db' => true];
+    }elseif($data['type'] == 'files'){
+        $artisanArguments = ['--disable-notifications' => true, '--only-files' => true];
+    }else{
+        config([
+            "backup.backup.source.files.include" => base_path(),
+            "backup.backup.source.files.exclude" => [],
+
+        ]);
+        $artisanArguments = ['--disable-notifications' => true, '--filename' => "whole_project_backup.zip"];
+    }
+    October\Rain\Support\Facades\Config::set('filesystems.disks.local.root', storage_path(Panakour\Backup\Models\Settings::UPLOAD_PATH));
+    \Artisan::call('backup:run', $artisanArguments);
+    return $this['theme_lang']['created_successfully'];
+}
+function onGetCurrency()
+{
+    $data       =   post();
+    $currency   =   Currency::find($data['id']);
+    return array('currency' => $currency);
+}
+function onTranslate()
+{
+    $data                   =   post();
+    $languages              =   \RainLab\Translate\Models\Locale::all();
+    $message                =   \RainLab\Translate\Models\Message::find($data['id']);
+
+    $message_data           =   array();
+    $message_data['x']      =   $message->message_data['x'];
+    foreach($languages as $lang){
+        if(isset($message->message_data[$lang->code])){
+            if($data['lang']    ==  $lang->code){
+                $message_data[$lang->code]      =   htmlspecialchars($data['translate']);
+            }else{
+                $message_data[$lang->code]      =  htmlspecialchars($message->message_data[$lang->code]);
+            }
+        }else{
+            if($data['lang']    ==  $lang->code){
+                $message_data[$lang->code]      =   htmlspecialchars($data['translate']);
+            }
+        }
+    }
+    $message->message_data  =   $message_data;
+    $message->save();
+
+    \System\Helpers\Cache::clear();
+    return true;
+}
+function onEnd()
+{
+    if($this->param('page')){
+        $this->page->title      =   ucfirst($this->param('page')) .' - '.$this->page->title;
+    }else{
+        $this->page->title      =   $this->page->title;
+    }
+}
+function onSave()
+{
+    $data = post();
+
+    $settings                       =   Settings::instance();
+    if($this->param('page') == 'general' || !$this->param('page')){
+        $settings->language             =   htmlspecialchars($data['language']);
+        $settings->timezone_offset      =   htmlspecialchars($data['timezone_offset']);
+        $settings->dateformat           =   htmlspecialchars($data['dateformat']);
+
+        $locale                 =   \RainLab\Translate\Models\Locale::where('code',$data['language'])->first();
+        $locale->is_default     =   1;
+        $locale->save();
+    }elseif($this->param('page') == 'company'){
+        $keywords       =   '';
+        $n = 0;
+        foreach(json_decode($data['company']['keywords']) as $keyword){
+            $n++;
+            $keywords   .=  $keyword->value;
+            if($n < count(json_decode($data['company']['keywords']))){
+                $keywords   .=  ',';
+            }
+        }
+        $company    =   array(
+                            'title'             =>  htmlspecialchars($data['company']['title']),
+                            'charset'           =>  htmlspecialchars($data['company']['charset']),
+                            'description'       =>  htmlspecialchars($data['company']['description']),
+                            'keywords'          =>  $keywords,
+                            'primary_email'     =>  htmlspecialchars($data['company']['primary_email']),
+                            'tax_number'        =>  htmlspecialchars($data['company']['tax_number']),
+                            'company_phone'     =>  htmlspecialchars($data['company']['company_phone']),
+                            'company_phone_2'   =>  htmlspecialchars($data['company']['company_phone_2']),
+                            'company_phone_3'   =>  htmlspecialchars($data['company']['company_phone_3']),
+                            'facebook'          =>  htmlspecialchars($data['company']['facebook']),
+                            'twitter'           =>  htmlspecialchars($data['company']['twitter']),
+                            'instagram'         =>  htmlspecialchars($data['company']['instagram']),
+                            'address'           =>  htmlspecialchars($data['address']),
+                            'lat'               =>  htmlspecialchars($data['lat']),
+                            'lng'               =>  htmlspecialchars($data['lng']),
+                            'county'            =>  htmlspecialchars($data['sublocality']),
+                            'city'              =>  htmlspecialchars($data['locality']),
+                            'state'             =>  htmlspecialchars($data['administrative_area_level_1']),
+                            'postal_code'       =>  htmlspecialchars($data['postal_code']),
+                            'country'           =>  htmlspecialchars($data['country']),
+                        );
+        $settings->company              =   $company;
+    }elseif($this->param('page') == 'google'){
+        $google    =   array(
+                            'map'          =>  array('key' => htmlspecialchars($data['map']['key'])),
+                            'recaptcha'    =>  array('key' => htmlspecialchars($data['recaptcha']['key'])),
+                        );
+        $settings->google              =   $google;
+    }
+    $settings->save();
+    \System\Helpers\Cache::clear();
+
+    \Flash::success($this['theme_lang']['updated_successfully']);
+    return Redirect::to('dashboard/settings/'.$this->param('page'));
+}
+function onDelete()
+{
+    $data = post();
+    switch($data['type']){
+        case 'languages':
+            if(!Auth::getUser()->hasUserPermission(["languages"],'d')) {
+                return Response::json(['error' => $this['theme_lang']['not_allowed']], 401);
+            }
+
+            if(null !== post('id')){
+                if(is_array(post('id'))){
+                    \RainLab\Translate\Models\Locale::whereIn('id',post('id'))->delete();
+                }else{
+                    \RainLab\Translate\Models\Locale::find($data['id'])->delete();
+                }
+                return Redirect::back();
+            }
+        break;
+        case 'departments':
+            if(!Auth::getUser()->hasUserPermission(["departments"],'d')) {
+                return Response::json(['error' => $this['theme_lang']['not_allowed']], 401);
+            }
+
+            if(null !== post('id')){
+                if(is_array(post('id'))){
+                    \RainLab\User\Models\UserGroup::whereIn('id',post('id'))->delete();
+                }else{
+                    \RainLab\User\Models\UserGroup::find($data['id'])->delete();
+                }
+                return Redirect::back();
+            }
+        break;
+        case 'employees':
+            if(!Auth::getUser()->hasUserPermission(["employees"],'d')) {
+                return Response::json(['error' => $this['theme_lang']['not_allowed']], 401);
+            }
+
+            if(null !== post('id')){
+                if(is_array(post('id'))){
+                    \RainLab\User\Models\User::whereIn('id',post('id'))->delete();
+                }else{
+                    \RainLab\User\Models\User::find($data['id'])->delete();
+                }
+                return Redirect::back();
+            }
+        break;
+        case 'backup':
+            if(!Auth::getUser()->hasUserPermission(["backups"],'d')) {
+                return Response::json(['error' => $this['theme_lang']['not_allowed']], 401);
+            }
+
+            if(null !== post('id')){
+                if(is_array(post('id'))){
+                    foreach(post('id') as $file){
+                        unlink(storage_path('app/uploads/panakour-backup/'.$file));
+                    }
+                }else{
+                    unlink(storage_path('app/uploads/panakour-backup/'.post('id')));
+                }
+                return Redirect::back();
+            }
+        break;
+    }
+}
+?>
+==
+<div class="kt-grid kt-grid--desktop kt-grid--ver kt-grid--ver-desktop kt-app">
+
+    <!--Begin:: App Aside Mobile Toggle-->
+    <button class="kt-app__aside-close" id="kt_user_profile_aside_close">
+        <i class="la la-close"></i>
+    </button>
+    <!--End:: App Aside Mobile Toggle-->
+
+    <!-- begin:: Aside -->
+    {% partial 'settingsmenu' %}
+    <!-- end:: Aside -->
+    <!--End::Aside-->
+
+    <!--Begin:: Inbox List-->
+    <div class="kt-grid__item kt-grid__item--fluid    kt-portlet    kt-inbox__list kt-inbox__list--shown" id="kt_inbox_list">
+        <div class="kt-portlet__head">
+    		<div class="kt-portlet__head-label">
+    			<h3 class="kt-portlet__head-title">
+    				{{this.page.title|__}}
+    			</h3>
+    		</div>
+        </div>
+        <div class="kt-portlet__body kt-portlet__body--fit-x">
+           	<div class="col-lg-12">
+                {{ form_ajax('onSave', { id: 'kt_form', class:'kt-form' }) }}
+    				<div class="row">
+    					<div class="col-xl-12">
+							<div class="form-group kt-hidden" id="kt-form_msg">
+                                <div class="alert alert-danger" role="alert">
+									{{'Oh snap! Change a few things up and try submitting again.'|__}}
+								</div>
+							</div>
+                        </div>
+                    </div>
+                    {% if this.param.page == 'general' or this.param.page is empty %}
+        				<div class="row">
+        					<div class="col-xl-2"></div>
+        					<div class="col-xl-8">
+        						<div class="kt-section kt-section--first">
+                                    <h3 class="kt-section__title kt-section__title-lg">{{'General'|__}}:</h3>
+        							<div class="kt-section__body">
+        								<div class="form-group row">
+        									<label class="col-xl-3 col-lg-3 col-form-label">{{'Default Language'|__}}</label>
+        									<div class="col-lg-9 col-xl-6">
+        										<select class="form-control" name="language" required>
+                                                    <option data-hidden="true"></option>
+                                                    {% for code, name in locales %}
+        												<option value="{{code}}" {% if language == code %}selected{% endif %} data-live-search="true">{{ name }}</option>
+                                                    {% endfor %}
+                                                </select>
+        									</div>
+        								</div>
+        								<div class="form-group row">
+        									<label class="col-xl-3 col-lg-3 col-form-label">{{'TimeZone'|__}}</label>
+        									<div class="col-lg-9 col-xl-6">
+        										<select class="form-control" name="timezone_offset" data-live-search="true" required>
+                                                    <option data-hidden="true"></option>
+                                                	<option value="-12:00" {% if timezone_offset == "-12:00" %}selected{% endif %}>(GMT -12:00) {{"Eniwetok, Kwajalein"|__}}</option>
+                                                	<option value="-11:00" {% if timezone_offset == "-11:00" %}selected{% endif %}>(GMT -11:00) {{"Midway Island, Samoa"|__}}</option>
+                                                	<option value="-10:00" {% if timezone_offset == "-10:00" %}selected{% endif %}>(GMT -10:00) {{"Hawaii"|__}}</option>
+                                                	<option value="-09:50" {% if timezone_offset == "-09:50" %}selected{% endif %}>(GMT -9:30) {{"Taiohae"|__}}</option>
+                                                	<option value="-09:00" {% if timezone_offset == "-09:00" %}selected{% endif %}>(GMT -9:00) {{"Alaska"|__}}</option>
+                                                	<option value="-08:00" {% if timezone_offset == "-08:00" %}selected{% endif %}>(GMT -8:00) {{"Pacific Time (US &amp; Canada)"|__}}</option>
+                                                	<option value="-07:00" {% if timezone_offset == "-07:00" %}selected{% endif %}>(GMT -7:00) {{"Mountain Time (US &amp; Canada)"|__}}</option>
+                                                	<option value="-06:00" {% if timezone_offset == "-06:00" %}selected{% endif %}>(GMT -6:00) {{"Central Time (US &amp; Canada), Mexico City"|__}}</option>
+                                                	<option value="-05:00" {% if timezone_offset == "-05:00" %}selected{% endif %}>(GMT -5:00) {{"Eastern Time (US &amp; Canada), Bogota, Lima"|__}}</option>
+                                                	<option value="-04:50" {% if timezone_offset == "-04:50" %}selected{% endif %}>(GMT -4:30) {{"Caracas"|__}}</option>
+                                                	<option value="-04:00" {% if timezone_offset == "-04:00" %}selected{% endif %}>(GMT -4:00) {{"Atlantic Time (Canada), Caracas, La Paz"|__}}</option>
+                                                	<option value="-03:50" {% if timezone_offset == "-03:50" %}selected{% endif %}>(GMT -3:30) {{"Newfoundland"|__}}</option>
+                                                	<option value="-03:00" {% if timezone_offset == "-03:00" %}selected{% endif %}>(GMT -3:00) {{"Brazil, Buenos Aires, Georgetown"|__}}</option>
+                                                	<option value="-02:00" {% if timezone_offset == "-02:00" %}selected{% endif %}>(GMT -2:00) {{"Mid-Atlantic"|__}}</option>
+                                                	<option value="-01:00" {% if timezone_offset == "-01:00" %}selected{% endif %}>(GMT -1:00) {{"Azores, Cape Verde Islands"|__}}</option>
+                                                	<option value="+00:00" {% if timezone_offset == "+00:00" %}selected{% endif %}>(GMT) Western Europe Time, London, Lisbon, Casablanca</option>
+                                                	<option value="+01:00" {% if timezone_offset == "+01:00" %}selected{% endif %}>(GMT +1:00) {{"Brussels, Copenhagen, Madrid, Paris"|__}}</option>
+                                                	<option value="+02:00" {% if timezone_offset == "+02:00" %}selected{% endif %}>(GMT +2:00) {{"Cairo, Kaliningrad, South Africa"|__}}</option>
+                                                	<option value="+03:00" {% if timezone_offset == "+03:00" %}selected{% endif %}>(GMT +3:00) {{"Baghdad, Riyadh, Moscow, St. Petersburg"|__}}</option>
+                                                	<option value="+03:50" {% if timezone_offset == "+03:50" %}selected{% endif %}>(GMT +3:30) {{"Tehran"|__}}</option>
+                                                	<option value="+04:00" {% if timezone_offset == "+04:00" %}selected{% endif %}>(GMT +4:00) {{"Abu Dhabi, Muscat, Baku, Tbilisi"|__}}</option>
+                                                	<option value="+04:50" {% if timezone_offset == "+04:50" %}selected{% endif %}>(GMT +4:30) {{"Kabul"|__}}</option>
+                                                	<option value="+05:00" {% if timezone_offset == "+05:00" %}selected{% endif %}>(GMT +5:00) {{"Ekaterinburg, Islamabad, Karachi, Tashkent"|__}}</option>
+                                                	<option value="+05:50" {% if timezone_offset == "+05:50" %}selected{% endif %}>(GMT +5:30) {{"Bombay, Calcutta, Madras, New Delhi"|__}}</option>
+                                                	<option value="+05:75" {% if timezone_offset == "+05:75" %}selected{% endif %}>(GMT +5:45) {{"Kathmandu, Pokhara"|__}}</option>
+                                                	<option value="+06:00" {% if timezone_offset == "+06:00" %}selected{% endif %}>(GMT +6:00) {{"Almaty, Dhaka, Colombo"|__}}</option>
+                                                	<option value="+06:50" {% if timezone_offset == "+06:50" %}selected{% endif %}>(GMT +6:30) {{"Yangon, Mandalay"|__}}</option>
+                                                	<option value="+07:00" {% if timezone_offset == "+07:00" %}selected{% endif %}>(GMT +7:00) {{"Bangkok, Hanoi, Jakarta"|__}}</option>
+                                                	<option value="+08:00" {% if timezone_offset == "+08:00" %}selected{% endif %}>(GMT +8:00) {{"Beijing, Perth, Singapore, Hong Kong"|__}}</option>
+                                                	<option value="+08:75" {% if timezone_offset == "+08:75" %}selected{% endif %}>(GMT +8:45) {{"Eucla"|__}}</option>
+                                                	<option value="+09:00" {% if timezone_offset == "+09:00" %}selected{% endif %}>(GMT +9:00) {{"Tokyo, Seoul, Osaka, Sapporo, Yakutsk"|__}}</option>
+                                                	<option value="+09:50" {% if timezone_offset == "+09:50" %}selected{% endif %}>(GMT +9:30) {{"Adelaide, Darwin"|__}}</option>
+                                                	<option value="+10:00" {% if timezone_offset == "+10:00" %}selected{% endif %}>(GMT +10:00) {{"Eastern Australia, Guam, Vladivostok"|__}}</option>
+                                                	<option value="+10:50" {% if timezone_offset == "+10:50" %}selected{% endif %}>(GMT +10:30) {{"Lord Howe Island"|__}}</option>
+                                                	<option value="+11:00" {% if timezone_offset == "+11:00" %}selected{% endif %}>(GMT +11:00) {{"Magadan, Solomon Islands, New Caledonia"|__}}</option>
+                                                	<option value="+11:50" {% if timezone_offset == "+11:50" %}selected{% endif %}>(GMT +11:30) {{"Norfolk Island"|__}}</option>
+                                                	<option value="+12:00" {% if timezone_offset == "+12:00" %}selected{% endif %}>(GMT +12:00) {{"Auckland, Wellington, Fiji, Kamchatka"|__}}</option>
+                                                	<option value="+12:75" {% if timezone_offset == "+12:75" %}selected{% endif %}>(GMT +12:45) {{"Chatham Islands"|__}}</option>
+                                                	<option value="+13:00" {% if timezone_offset == "+13:00" %}selected{% endif %}>(GMT +13:00) {{"Apia, Nukualofa"|__}}</option>
+                                                	<option value="+14:00" {% if timezone_offset == "+14:00" %}selected{% endif %}>(GMT +14:00) {{"Line Islands, Tokelau"|__}}</option>
+                                                </select>
+        									</div>
+        								</div>
+        								<div class="form-group row">
+        									<label class="col-xl-3 col-lg-3 col-form-label">{{'Date Format'|__}}</label>
+        									<div class="col-lg-9 col-xl-6">
+        										<select class="form-control" name="dateformat" required>
+                                                    <option data-hidden="true"></option>
+                                                    <option value="d/m/Y" {% if dateformat == "d/m/Y" %}selected{% endif %}>{{'now'|date('d/m/Y')}}</option>
+                                                    <option value="m/d/Y" {% if dateformat == "m/d/Y" %}selected{% endif %}>{{'now'|date('m/d/Y')}}</option>
+                                                    <option value="d M, Y" {% if dateformat == "d M, Y" %}selected{% endif %}>{{'now'|date('d M, Y')}}</option>
+                                                    <option value="M d, Y" {% if dateformat == "M d, Y" %}selected{% endif %}>{{'now'|date('M d, Y')}}</option>
+                                                </select>
+        									</div>
+        								</div>
+        							</div>
+        						</div>
+        					</div>
+        					<div class="col-xl-2"></div>
+        				</div>
+        				<div class="row">
+        					<div class="col-xl-4"></div>
+        					<div class="col-xl-8">
+                                <div class="form-group">
+                                    <button type="submit" class="btn btn-primary">{{'Save'|__}}</button>
+                                </div>
+                            </div>
+                        </div>
+                    {% elseif this.param.page == 'company' %}
+        				<div class="row">
+        					<div class="col-xl-2"></div>
+        					<div class="col-xl-8">
+        						<div class="kt-section kt-section--first">
+                                    <h3 class="kt-section__title kt-section__title-lg">{{'Company Settings'|__}}:</h3>
+        							<div class="kt-section__body">
+                                        <div class="form-group row">
+                                            <label class="col-xl-3 col-lg-3 col-form-label">{{'Website Name'|__}}</label>
+                                            <div class="col-lg-9 col-xl-6">
+                                                <input class="form-control" type="text" name="company[title]" value="{{company.title}}" required>
+                                            </div>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-xl-3 col-lg-3 col-form-label">{{'Website charset'|__}}</label>
+                                            <div class="col-lg-9 col-xl-6">
+                                                <input class="form-control" type="text" name="company[charset]" value="{{company.charset}}" required>
+                                            </div>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-xl-3 col-lg-3 col-form-label">{{'Website Description'|__}}</label>
+                                            <div class="col-lg-9 col-xl-6">
+                                                <textarea class="form-control" name="company[description]" required>{{company.description}}</textarea>
+                                            </div>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-xl-3 col-lg-3 col-form-label">{{'Website Keywords'|__}}</label>
+                                            <div class="col-lg-9 col-xl-6">
+                                                <input id="kt_tagify_2" class="tagify" placeholder='{{"type"|__}}...' value='{{company.keywords}}' name="company[keywords]" />
+                                                <span class="form-text text-muted">{{'Seprate with comma'|__}} ,</span>
+                                            </div>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-xl-3 col-lg-3 col-form-label">{{'Primary Email'|__}}</label>
+                                            <div class="col-lg-9 col-xl-6">
+                                                <div class="input-group">
+    												<div class="input-group-prepend"><span class="input-group-text"><i class="la la-at"></i></span></div>
+    												<input type="text" class="form-control" name="company[primary_email]" value="{{company.primary_email}}" placeholder="{{'Email'|__}}" aria-describedby="basic-addon1">
+    											</div>
+                                                <span class="form-text text-muted">{{'This is the main email notices will be sent to. It is also used as the from email when emailing other automatic emails'|__}}.</span>
+                                            </div>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-xl-3 col-lg-3 col-form-label">{{'Tax Identification Number'|__}}</label>
+                                            <div class="col-lg-9 col-xl-6">
+                                                <input class="form-control" type="text" name="company[tax_number]" value="{{company.tax_number}}" required>
+                                            </div>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-xl-3 col-lg-3 col-form-label">{{'Company Phone'|__}}</label>
+                                            <div class="col-lg-9 col-xl-6">
+                                                <div class="input-group">
+    												<div class="input-group-prepend"><span class="input-group-text"><i class="la la-phone"></i></span></div>
+    												<input type="text" class="form-control" name="company[company_phone]" value="{{company.company_phone}}" placeholder="{{'Phone'|__}}" aria-describedby="basic-addon1">
+    											</div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-xl-3 col-lg-3 col-form-label">{{'Company Phone 2'|__}}</label>
+                                            <div class="col-lg-9 col-xl-6">
+                                                <div class="input-group">
+    												<div class="input-group-prepend"><span class="input-group-text"><i class="la la-phone"></i></span></div>
+    												<input type="text" class="form-control" name="company[company_phone_2]" value="{{company.company_phone_2}}" placeholder="{{'Phone'|__}}" aria-describedby="basic-addon1">
+    											</div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-xl-3 col-lg-3 col-form-label">{{'Company Phone 3'|__}}</label>
+                                            <div class="col-lg-9 col-xl-6">
+                                                <div class="input-group">
+    												<div class="input-group-prepend"><span class="input-group-text"><i class="la la-phone"></i></span></div>
+    												<input type="text" class="form-control" name="company[company_phone_3]" value="{{company.company_phone_3}}" placeholder="{{'Phone'|__}}" aria-describedby="basic-addon1">
+    											</div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-xl-3 col-lg-3 col-form-label">{{'Facebook'|__}}</label>
+                                            <div class="col-lg-9 col-xl-6">
+                                                <input class="form-control" type="text" name="company[facebook]" value="{{company.facebook}}" required>
+                                            </div>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-xl-3 col-lg-3 col-form-label">{{'Twitter'|__}}</label>
+                                            <div class="col-lg-9 col-xl-6">
+                                                <input class="form-control" type="text" name="company[twitter]" value="{{company.twitter}}" required>
+                                            </div>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-xl-3 col-lg-3 col-form-label">{{'Instagram'|__}}</label>
+                                            <div class="col-lg-9 col-xl-6">
+                                                <input class="form-control" type="text" name="company[instagram]" value="{{company.instagram}}" required>
+                                            </div>
+                                        </div>
+                                        <div class="location-complete">
+                                            <div class="form-group row">
+                                                <label class="col-xl-3 col-lg-3 col-form-label">{{'Company Official Address'|__}}</label>
+                                                <div class="col-lg-9 col-xl-6">
+                                                    <input type="text" class="form-control" id="address" name="address" value="{% if company.address %}{{company.address|__}}{% endif %}"/>
+                                                    <input type="hidden" class="form-control" name="lat" value="{{company.lat}}"/>
+                                                    <input type="hidden" class="form-control" name="lng" value="{{company.lng}}"/>
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <label class="col-xl-3 col-lg-3 col-form-label">{{'Google Map'|__}}</label>
+                                                <div class="col-lg-9 col-xl-6">
+                                                    <div id="map_canvas" class="col-sm-12"></div>
+                                                    <span class="form-text text-muted">{{'Change the pin to select the right location'|__}}</span>
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <label class="col-xl-3 col-lg-3 col-form-label">{{'County'|__}}</label>
+                                                <div class="col-lg-9 col-xl-6">
+                                                    <input class="form-control" type="text" name="sublocality" value="{% if company.county %}{{company.county|__}}{% endif %}">
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <label class="col-xl-3 col-lg-3 col-form-label">{{'City'|__}}</label>
+                                                <div class="col-lg-9 col-xl-6">
+                                                    <input class="form-control" type="text" name="locality" value="{% if company.city %}{{company.city|__}}{% endif %}">
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <label class="col-xl-3 col-lg-3 col-form-label">{{'State / Region'|__}}</label>
+                                                <div class="col-lg-9 col-xl-6">
+                                                    <input class="form-control" type="text" name="administrative_area_level_1" value="{% if company.state %}{{company.state|__}}{% endif %}">
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <label class="col-xl-3 col-lg-3 col-form-label">{{'Postal Code'|__}}</label>
+                                                <div class="col-lg-9 col-xl-6">
+                                                    <input class="form-control" type="text" name="postal_code" value="{% if company.postal_code %}{{company.postal_code|__}}{% endif %}">
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <label class="col-xl-3 col-lg-3 col-form-label">{{'Country'|__}}</label>
+                                                <div class="col-lg-9 col-xl-6">
+                                                    <input class="form-control" type="text" name="country" value="{% if company.country %}{{company.country|__}}{% endif %}">
+                                                </div>
+                                            </div>
+            							</div>
+        							</div>
+        						</div>
+        						<div class="kt-section">
+        							<div class="kt-section__body">
+                                        <div class="form-group row">
+                                            <label class="col-xl-3 col-lg-3 col-form-label">{{'Company Logo'|__}}</label>
+                                            <div class="col-lg-9 col-xl-6">
+                                                {% if Logo.isMulti %}
+                                                    {% partial Logo ~ '::image-multi' %}
+                                                {% else %}
+                                                    {% partial Logo ~ '::image-single' %}
+                                                {% endif %}
+                                                <span class="form-text text-muted">{{'Perfered Size'|__}} 180 x 30.</span>
+                                            </div>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-xl-3 col-lg-3 col-form-label">{{'Mobile Logo'|__}}</label>
+                                            <div class="col-lg-9 col-xl-6">
+                                                {% if MobileLogo.isMulti %}
+                                                    {% partial MobileLogo ~ '::image-multi' %}
+                                                {% else %}
+                                                    {% partial MobileLogo ~ '::image-single' %}
+                                                {% endif %}
+                                                <span class="form-text text-muted">{{'Max Height'|__}} 40px.</span>
+                                            </div>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-xl-3 col-lg-3 col-form-label">{{'Company Favicon'|__}}</label>
+                                            <div class="col-lg-9 col-xl-6">
+                                                {% if Favicon.isMulti %}
+                                                    {% partial Favicon ~ '::image-multi' %}
+                                                {% else %}
+                                                    {% partial Favicon ~ '::image-single' %}
+                                                {% endif %}
+                                                <span class="form-text text-muted">{{'Size'|__}} 48 x 48.</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+        					</div>
+        					<div class="col-xl-2"></div>
+        				</div>
+        				<div class="row">
+        					<div class="col-xl-4"></div>
+        					<div class="col-xl-8">
+                                <div class="form-group">
+                                    <button type="submit" class="btn btn-primary">{{'Save'|__}}</button>
+                                </div>
+                            </div>
+                        </div>
+                    {% elseif this.param.page == 'google' %}
+        				<div class="row">
+        					<div class="col-xl-2"></div>
+        					<div class="col-xl-8">
+        						<div class="kt-section kt-section--first">
+                                    <h3 class="kt-section__title kt-section__title-lg">{{'Google APIs'|__}}:</h3>
+        							<div class="kt-section__body">
+                                        <div class="kt-section">
+                        					<h5 class="kt-section__title kt-margin-b-20">
+                        						{{'Google Maps'|__}}&nbsp;<span class="kt-badge kt-badge--danger kt-badge--dot"></span>
+                        					</h5>
+                        					<div class="kt-section__content">
+                                                <div class="form-group row">
+                                                    <label class="col-xl-3 col-lg-3 col-form-label">{{'Key'|__}}</label>
+                                                    <div class="col-lg-9 col-xl-6">
+                                                        <input class="form-control" type="text" name="map[key]" value="{{google.map.key}}" required>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="kt-separator kt-separator--border-dashed kt-separator--space-lg kt-separator--portlet-fit"></div>
+                                        <div class="kt-section">
+                        					<h5 class="kt-section__title kt-margin-b-20">
+                        						{{'Recaptcha'|__}} ( V2 )&nbsp;<span class="kt-badge kt-badge--danger kt-badge--dot"></span>
+                        					</h5>
+                        					<div class="kt-section__content">
+                                                <div class="form-group row">
+                                                    <label class="col-xl-3 col-lg-3 col-form-label">{{'Key'|__}}</label>
+                                                    <div class="col-lg-9 col-xl-6">
+                                                        <input class="form-control" type="text" name="recaptcha[key]" value="{{google.recaptcha.key}}" required>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="kt-separator kt-separator--border-dashed kt-separator--space-lg kt-separator--portlet-fit"></div>
+        							</div>
+        						</div>
+        					</div>
+        					<div class="col-xl-2"></div>
+        				</div>
+        				<div class="row">
+        					<div class="col-xl-4"></div>
+        					<div class="col-xl-8">
+                                <div class="form-group">
+                                    <button type="submit" class="btn btn-primary">{{'Save'|__}}</button>
+                                </div>
+                            </div>
+                        </div>
+                    {% elseif this.param.page == 'languages' %}
+                        <div class="kt-section kt-section--first">
+                            <div class="kt-section__body">
+                                <div class="kt-datatable"></div>
+                            </div>
+                        </div>
+                    {% elseif this.param.page == 'departments' %}
+                        <div class="kt-section kt-section--first">
+                            <div class="kt-section__body">
+                                <div class="kt-datatable"></div>
+                            </div>
+                        </div>
+                    {% elseif this.param.page == 'employees' %}
+                        <div class="kt-section kt-section--first">
+                            <div class="kt-section__body">
+                                <div class="kt-datatable"></div>
+                            </div>
+                        </div>
+                    {% elseif this.param.page == 'translate' %}
+                        <div class="kt-section kt-section--first">
+                            <div class="kt-section__body">
+                                <table class="table table-striped- table-bordered table-hover table-checkable" id="kt_table_1">
+                                	<thead>
+                                		<tr>
+                                			{% for lang in languages %}
+                                				<th>{{lang.name}}</th>
+                                			{% endfor %}
+                                		</tr>
+                                	</thead>
+                                </table>
+                            </div>
+                        </div>
+                    {% elseif this.param.page == 'backup' %}
+                        <div class="kt-section kt-section--first">
+                            <div class="kt-section__body">
+                                <div class="kt-datatable"></div>
+                            </div>
+                        </div>
+                    {% endif %}
+                {{ form_close() }}
+        	</div>
+        </div>
+    </div>
+</div>
+
+
+{% put styles %}
+    {% if this.param.page == 'company' %}
+        <style>
+            #map_canvas {
+              height: 350px;
+            }
+        </style>
+    {% elseif this.param.page == 'translate' %}
+        <style>
+            label.translate {
+                display: block;
+                width: 100%;
+                line-height: 24px;
+                min-height: 24px;
+            }
+        </style>
+    {% endif %}
+{% endput %}
+{% put scripts %}
+{% if this.param.page == 'company' %}
+    <script src="{{ 'assets/admin/vendors/custom/geocomplete/jquery.geocomplete.js'|theme }}" type="text/javascript"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?libraries=places&key={{settings.google.map.key}}"></script>
+{% elseif (this.param.page == 'translate' or this.param.page == 'backup' or this.param.page == 'languages' or this.param.page == 'departments') %}
+    <script src="{{ 'assets/admin/vendors/custom/datatables/datatables.bundle.js'|theme }}" type="text/javascript"></script>
+{% endif %}
+<script>
+"use strict";
+var KTAppUserListDatatable = function () {
+    // variables
+    var datatable;
+
+    // init
+    var init = function () {
+        // init the datatables. Learn more: https://keenthemes.com/metronic/?page=docs&section=datatable
+        datatable = $('.kt-datatable').KTDatatable({
+            translate: {
+                records: {
+                    processing: '{{"Please wait"|__}}...',
+                    noRecords: '{{"No records found"|__}}'
+                },
+                toolbar: {
+                    pagination: {
+                        items: {
+                            default: {
+                                first: '{{"First"|__}}',
+                                prev: '{{"Previous"|__}}',
+                                next: '{{"Next"|__}}',
+                                last: '{{"Last"|__}}',
+                                more: '{{"More pages"|__}}',
+                                input: '{{"Page number"|__}}',
+                                select: '{{"Select page size"|__}}'
+                            },
+
+                            //info: "{{"Displaying"|__}} {{start|escape('js')}} - {{end}} {{"of"|__}} {{total}} {{"records"|__}}"
+                        }
+                    }
+                }
+            },
+
+            // layout definition
+            layout: {
+                scroll: false, // enable/disable datatable scroll both horizontal and vertical when needed.
+                footer: false, // display/hide footer
+            },
+
+            // column sorting
+            sortable: true,
+
+            pagination: true,
+
+            search: {
+                input: $('#generalSearch'),
+                delay: 400,
+            },
+            {% if this.param.page == 'languages' %}
+                // datasource definition
+                data: {
+                    type: 'remote',
+                    source: {
+                        read: {
+                            url: '{{url("api/languages")}}',
+                        },
+                    },
+                    pageSize: 10, // display 20 records per page
+                    serverPaging: true,
+                    serverFiltering: true,
+                    serverSorting: true,
+                },
+                // columns definition
+                columns: [
+                    {
+                        field: 'id',
+                        title: '#',
+                        sortable: false,
+                        width: 20,
+                        selector: {
+                            class: 'kt-checkbox--solid'
+                        },
+                        textAlign: 'center',
+                    },
+                    {
+                        field: "name",
+                        title: "{{'Name'|__}}",
+                        autoHide: false,
+                        sortable: false,
+                        width: 'auto',
+                    },
+                    {
+                        field: "code",
+                        title: "{{'Code'|__}}",
+                        autoHide: false,
+                        sortable: false,
+                        width: 'auto',
+                    },
+                    {
+                        field: "is_enabled",
+                        title: "{{'Enabled'|__}}",
+                        autoHide: false,
+                        sortable: false,
+                        width: 'auto',
+        				// callback function support for column rendering
+        				template: function(row) {
+
+        					var status = {
+                                1: {
+                                    'title': '{{"Yes"|__}}',
+                                    'class': 'success'
+                                },
+        						0: {
+        							'title': '{{"No"|__}}',
+        							'class': 'danger'
+        						},
+        						'null': {
+        							'title': '{{"No"|__}}',
+        							'class': 'danger'
+        						},
+        					};
+                            return '<span class="kt-badge kt-badge--' + status[row.is_enabled].class + ' kt-badge--dot"></span>&nbsp;<span class="kt-font-bold kt-font-' + status[row.is_enabled].class + '">' + status[row.is_enabled].title + '</span>';
+        				}
+                    },{
+        				field: "is_default",
+        				title: "{{'Default'|__}}",
+        				width: 'auto',
+                        sortable: true,
+                        width: 120,
+        				// callback function support for column rendering
+        				template: function(row) {
+
+        					var status = {
+                                1: {
+                                    'title': '{{"Yes"|__}}',
+                                    'class': 'success'
+                                },
+        						0: {
+        							'title': '{{"No"|__}}',
+        							'class': 'danger'
+        						},
+        						'null': {
+        							'title': '{{"No"|__}}',
+        							'class': 'danger'
+        						},
+        					};
+                            return '<span class="kt-badge kt-badge--' + status[row.is_default].class + ' kt-badge--dot"></span>&nbsp;<span class="kt-font-bold kt-font-' + status[row.is_default].class + '">' + status[row.is_default].title + '</span>';
+        				}
+                    },
+                    {
+                        field: "Actions",
+                        width: 'auto',
+                        title: "{{'Actions'|__}}",
+                        sortable: false,
+                        autoHide: false,
+                        overflow: 'visible',
+                        template: function (data) {
+                                {% if (user.hasUserPermission('languages', 'u') or user.hasUserPermission('languages', 'd')) %}
+                                    return '' +
+                                    '<div class="btn-group btn-group" role="group" aria-label="...">'+
+                                        {% if user.hasUserPermission('languages', 'u') %}
+                                        '<a href="{{url("dashboard/settings/languages")}}/'+data.id+'/edit" class="btn btn-info btn-sm"><i class="flaticon-edit"></i>&nbsp;{{"Edit"|__}}</button>'+
+                                        {% endif %}
+                                        {% if user.hasUserPermission('languages', 'd') %}
+                                        '<a href="javascript:void(0);" class="btn btn-danger btn-sm delete_record kt-font-light" rel="'+data.id+'" data-type="languages"><i class="flaticon2-delete"></i>&nbsp;{{"Delete"|__}}</a>'+
+                                        {% endif %}
+                                    '</div>';
+                                {% else %}
+                                    return '-';
+                                {% endif %}
+                        },
+                    }
+                ]
+            {% elseif this.param.page == 'departments' %}
+                // datasource definition
+                data: {
+                    type: 'remote',
+                    source: {
+                        read: {
+                            url: '{{url("api/departments")}}',
+                        },
+                    },
+                    pageSize: 10, // display 20 records per page
+                    serverPaging: true,
+                    serverFiltering: true,
+                    serverSorting: true,
+                },
+                // columns definition
+                columns: [
+                    {
+                        field: 'id',
+                        title: '#',
+                        sortable: false,
+                        width: 20,
+                        selector: {
+                            class: 'kt-checkbox--solid'
+                        },
+                        textAlign: 'center',
+                    },
+                    {
+                        field: "name",
+                        title: "{{'Name'|__}}",
+                        autoHide: false,
+                        sortable: false,
+                        width: 'auto',
+                    },
+                    {
+                        field: "code",
+                        title: "{{'Code'|__}}",
+                        autoHide: false,
+                        sortable: false,
+                        width: 'auto',
+                    },
+                    {
+                        field: "Actions",
+                        width: 'auto',
+                        title: "{{'Actions'|__}}",
+                        sortable: false,
+                        autoHide: false,
+                        overflow: 'visible',
+                        template: function (data) {
+                                {% if (user.hasUserPermission('departments', 'u') or user.hasUserPermission('departments', 'd')) %}
+                                    return '' +
+                                    '<div class="btn-group btn-group" role="group" aria-label="...">'+
+                                        {% if user.hasUserPermission('departments', 'u') %}
+                                        '<a href="{{url("dashboard/settings/departments")}}/'+data.id+'/edit" class="btn btn-info btn-sm"><i class="flaticon-edit"></i>&nbsp;{{"Edit"|__}}</button>'+
+                                        {% endif %}
+                                        {% if user.hasUserPermission('departments', 'd') %}
+                                        '<a href="javascript:void(0);" class="btn btn-danger btn-sm delete_record kt-font-light" rel="'+data.id+'" data-type="departments"><i class="flaticon2-delete"></i>&nbsp;{{"Delete"|__}}</a>'+
+                                        {% endif %}
+                                    '</div>';
+                                {% else %}
+                                    return '-';
+                                {% endif %}
+                        },
+                    }
+                ]
+            {% elseif this.param.page == 'employees' %}
+                // datasource definition
+                data: {
+                    type: 'remote',
+                    source: {
+                        read: {
+                            url: '{{url("api/employees")}}',
+                        },
+                    },
+                    pageSize: 10, // display 20 records per page
+                    serverPaging: true,
+                    serverFiltering: true,
+                    serverSorting: true,
+                },
+                // columns definition
+                columns: [
+                    {
+                        field: 'id',
+                        title: '#',
+                        sortable: false,
+                        width: 20,
+                        selector: {
+                            class: 'kt-checkbox--solid'
+                        },
+                        textAlign: 'center',
+                    },
+                    {
+                        field: "name",
+                        title: "{{'Name'|__}}",
+                        autoHide: false,
+                        sortable: false,
+                        width: 'auto',
+                    },
+                    {
+                        field: "role",
+                        title: "{{'Role'|__}}",
+                        autoHide: false,
+                        sortable: false,
+                        width: 'auto',
+                    },
+                    {
+                        field: "groups",
+                        title: "{{'Departments'|__}}",
+                        autoHide: false,
+                        sortable: false,
+                        width: 'auto',
+                        template: function (data) {
+                            if(data.groups){
+                                var i;
+                                var text = '-';
+                                for (i = 0; i < data.groups.length; i++) {
+                                    if(text == '-'){
+                                        text = data.groups[i];
+                                    }else{
+                                        if(i < data.groups.length){
+                                            text += ', ';
+                                        }
+                                        text += data.groups[i];
+                                    }
+                                }
+                                return text;
+                            }else{
+                                return '-';
+                            }
+                        },
+                    },
+                    {
+                        field: "Actions",
+                        width: 'auto',
+                        title: "{{'Actions'|__}}",
+                        sortable: false,
+                        autoHide: false,
+                        overflow: 'visible',
+                        template: function (data) {
+                                {% if (user.hasUserPermission('employees', 'u') or user.hasUserPermission('employees', 'd')) %}
+                                    return '' +
+                                    '<div class="btn-group btn-group" role="group" aria-label="...">'+
+                                        {% if user.hasUserPermission('employees', 'u') %}
+                                        '<a href="{{url("dashboard/settings/employees")}}/'+data.id+'/edit" class="btn btn-info btn-sm"><i class="flaticon-edit"></i>&nbsp;{{"Edit"|__}}</button>'+
+                                        {% endif %}
+                                        {% if user.hasUserPermission('employees', 'd') %}
+                                        '<a href="javascript:void(0);" class="btn btn-danger btn-sm delete_record kt-font-light" rel="'+data.id+'" data-type="employees"><i class="flaticon2-delete"></i>&nbsp;{{"Delete"|__}}</a>'+
+                                        {% endif %}
+                                    '</div>';
+                                {% else %}
+                                    return '-';
+                                {% endif %}
+                        },
+                    }
+                ]
+            {% elseif this.param.page == 'backup' %}
+                // datasource definition
+                data: {
+                    type: 'remote',
+                    source: {
+                        read: {
+                            url: '{{url("api/backups")}}',
+                        },
+                    },
+                    pageSize: 10, // display 20 records per page
+                    serverPaging: true,
+                    serverFiltering: true,
+                    serverSorting: true,
+                },
+                // columns definition
+                columns: [
+                    {
+                        field: "fileInfo",
+                        title: "{{'Name'|__}}",
+                        autoHide: false,
+                        sortable: false,
+                        width: 'auto',
+                        template: function (data) {
+                            return '<a href="{{"app/uploads/panakour-backup"|media|replace({"app/media/": ""})}}/' + data.fileInfo.basename + '" download>' + data.fileInfo.basename + '</a>';
+                        },
+                    },
+                    {
+                        field: "size",
+                        title: "{{'Size'|__}}",
+                        autoHide: false,
+                        sortable: false,
+                        width: 'auto',
+                        template: function (data) {
+                            return data.size + ' {{"KB"|__}}';
+                        },
+                    },
+                    {
+                        field: "lastModified",
+                        title: "{{'Created Date'|__}}",
+                        autoHide: false,
+                        sortable: false,
+                        width: 'auto',
+                    },
+                    {
+                        field: "Actions",
+                        width: 'auto',
+                        title: "{{'Actions'|__}}",
+                        sortable: false,
+                        autoHide: false,
+                        overflow: 'visible',
+                        template: function (data) {
+                                {% if (user.hasUserPermission('backups', 'd')) %}
+                                    return '' +
+                                    '<div class="btn-group btn-group" role="group" aria-label="...">'+
+                                        {% if user.hasUserPermission('backups', 'd') %}
+                                        '<a href="javascript:void(0);" class="btn btn-danger btn-sm delete_record kt-font-light" rel="'+data.fileInfo.basename+'" data-type="backup"><i class="flaticon2-delete"></i>&nbsp;{{"Delete"|__}}</a>'+
+                                        {% endif %}
+                                    '</div>';
+                                {% else %}
+                                    return '-';
+                                {% endif %}
+                        },
+                    }
+                ]
+            {% endif %}
+        });
+    };
+
+    // search
+    var search = function () {
+        $('#filter_form select,#filter_form input').each(function(){
+            $(this).on('change', function () {
+                datatable.search($(this).val().toLowerCase(), $(this).attr('name'));
+            });
+        });
+        $('#reset').on('click', function () {
+            datatable.destroy();
+            $('#filter_form select,#filter_form input').each(function(){
+                $(this).val('');
+            });
+            $('#filter_form select').each(function(){
+                $(this).selectpicker("refresh");
+            });
+            init();
+        });
+    };
+
+    // selection
+    var selection = function () {
+        // init form controls
+        //$('#kt_form_status, #kt_form_type').selectpicker();
+
+        // event handler on check and uncheck on records
+        datatable.on('kt-datatable--on-check kt-datatable--on-uncheck kt-datatable--on-layout-updated', function (e) {
+            var checkedNodes = datatable.rows('.kt-datatable__row--active').nodes(); // get selected records
+            var count = checkedNodes.length; // selected records count
+
+            $('#kt_subheader_group_selected_rows').html(count);
+
+            if (count > 0) {
+                $('#kt_subheader_search').addClass('kt-hidden');
+                $('#kt_subheader_group_actions').removeClass('kt-hidden');
+            } else {
+                $('#kt_subheader_search').removeClass('kt-hidden');
+                $('#kt_subheader_group_actions').addClass('kt-hidden');
+            }
+        });
+    }
+
+    // selected records status update
+    var selectedStatusUpdate = function () {
+        $('#kt_subheader_group_actions_status_change').on('click', "[data-toggle='status-change']", function () {
+            var status = $(this).find(".kt-nav__link-text").html();
+
+            // fetch selected IDs
+            var ids = datatable.rows('.kt-datatable__row--active').nodes().find('.kt-checkbox--single > [type="checkbox"]').map(function (i, chk) {
+                return $(chk).val();
+            });
+
+            if (ids.length > 0) {
+                // learn more: https://sweetalert2.github.io/
+                swal.fire({
+                    buttonsStyling: false,
+
+                    html: "{{"Are you sure to update"|__}} " + ids.length + " {{"selected records status to"|__}} " + status + " ?",
+                    type: "info",
+
+                    confirmButtonText: "{{"Yes, update"|__}}!",
+                    confirmButtonClass: "btn btn-sm btn-bold btn-brand",
+
+                    showCancelButton: true,
+                    cancelButtonText: "{{"No, cancel"|__}}",
+                    cancelButtonClass: "btn btn-sm btn-bold btn-default"
+                }).then(function (result) {
+                    if (result.value) {
+                        swal.fire({
+                            title: '{{"Deleted"|__}}!',
+                            text: '{{"Your selected records statuses have been updated"|__}}!',
+                            type: 'success',
+                            buttonsStyling: false,
+                            confirmButtonText: "{{"OK"|__}}",
+                            confirmButtonClass: "btn btn-sm btn-bold btn-brand",
+                        })
+                        // result.dismiss can be 'cancel', 'overlay',
+                        // 'close', and 'timer'
+                    } else if (result.dismiss === 'cancel') {
+                        swal.fire({
+                            title: '{{"Cancelled"|__}}',
+                            text: '{{"You selected records statuses have not been updated"|__}}!',
+                            type: 'error',
+                            buttonsStyling: false,
+                            confirmButtonText: "{{"OK"|__}}",
+                            confirmButtonClass: "btn btn-sm btn-bold btn-brand",
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    // selected records delete
+    var selectedDelete = function () {
+        $('#kt_subheader_group_actions_delete_all').on('click', function () {
+            // fetch selected IDs
+            var selected = [];
+            var type    = $('.delete_record').attr('data-type');
+            var ids = datatable.rows('.kt-datatable__row--active').nodes().find('.kt-checkbox--single > [type="checkbox"]').map(function (i, chk) {
+                selected[$(chk).val()] = $(chk).val();
+                return $(chk).val();
+            });
+
+            if (ids.length > 0) {
+                // learn more: https://sweetalert2.github.io/
+                swal.fire({
+                    buttonsStyling: false,
+
+                    text: "{{'Are you sure to delete'|__}} " + ids.length + " {{'selected records ?'|__}}",
+                    type: "danger",
+
+                    confirmButtonText: "{{'Yes, delete!'|__}}",
+                    confirmButtonClass: "btn btn-sm btn-bold btn-danger",
+
+                    showCancelButton: true,
+                    cancelButtonText: '{{"No, cancel"|__}}',
+                    cancelButtonClass: "btn btn-sm btn-bold btn-brand"
+                }).then(function (result) {
+                    if (result.value) {
+                        $.request('onDelete', {
+                            data: {id: selected,type: type},
+                            success: function(data) {
+                                swal.fire({
+                                    title: '{{"Deleted!"|__}}',
+                                    text: '{{"Your selected records have been deleted! :("|__}}',
+                                    type: 'success',
+                                    buttonsStyling: false,
+                                    confirmButtonText: '{{"OK"|__}}',
+                                    confirmButtonClass: "btn btn-sm btn-bold btn-brand",
+                                });
+                                datatable.reload();
+                            }
+                        });
+                        // result.dismiss can be 'cancel', 'overlay',
+                        // 'close', and 'timer'
+                    } else if (result.dismiss === 'cancel') {
+                        swal.fire({
+                            title: '{{"Cancelled"|__}}',
+                            text: '{{"You selected records have not been deleted! :)"|__}}',
+                            type: 'error',
+                            buttonsStyling: false,
+                            confirmButtonText: '{{"OK"|__}}',
+                            confirmButtonClass: "btn btn-sm btn-bold btn-brand",
+                        });
+                    }
+                });
+            }
+        });
+
+
+        $('body').on('click','.delete_record',function(){
+            var id      = $(this).attr('rel');
+            var type    = $(this).attr('data-type');
+            swal.fire({
+                buttonsStyling: false,
+
+                text: "{{'Are you sure to delete this item ?'|__}}",
+                type: "danger",
+
+                confirmButtonText: "{{'Yes, delete!'|__}}",
+                confirmButtonClass: "btn btn-sm btn-bold btn-danger",
+
+                showCancelButton: true,
+                cancelButtonText: '{{"No, cancel"|__}}',
+                cancelButtonClass: "btn btn-sm btn-bold btn-brand"
+            }).then(function (result) {
+                if (result.value) {
+                    $.request('onDelete', {
+                        data: {id: id, type: type},
+                        success: function(data) {
+
+                            swal.fire({
+                                title: '{{"Deleted!"|__}}',
+                                text: '{{"Your selected record has been deleted! :("|__}}',
+                                type: 'success',
+                                buttonsStyling: false,
+                                confirmButtonText: '{{"OK"|__}}',
+                                confirmButtonClass: "btn btn-sm btn-bold btn-brand",
+                            });
+                            datatable.reload();
+                        }
+                    });
+                    // result.dismiss can be 'cancel', 'overlay',
+                    // 'close', and 'timer'
+                } else if (result.dismiss === 'cancel') {
+                    swal.fire({
+                        title: '{{"Cancelled"|__}}',
+                        text: '{{"You selected record has not been deleted! :)"|__}}',
+                        type: 'error',
+                        buttonsStyling: false,
+                        confirmButtonText: '{{"OK"|__}}',
+                        confirmButtonClass: "btn btn-sm btn-bold btn-brand",
+                    });
+                }
+            });
+        });
+    }
+
+    var updateTotal = function () {
+        datatable.on('kt-datatable--on-layout-updated', function () {
+            $('#kt_subheader_total').html(datatable.getTotalRows() + ' {{"Total"|__}}');
+        });
+    };
+
+    var reload = function () {
+        datatable.reload();
+    };
+
+    return {
+        // public functions
+        init: function () {
+            init();
+            search();
+            selection();
+            selectedStatusUpdate();
+            selectedDelete();
+            updateTotal();
+        },
+
+        reload: function(){
+            reload();
+        }
+    };
+}();
+var KTDatatablesExtensions = function() {
+
+	var initTable1 = function() {
+		var table = $('#kt_table_1');
+
+        {% if this.param.page == 'translate' %}
+    		// begin first table
+    		table.DataTable({
+    			responsive: true,
+                dom: "<'row'<'col-md-6' f><'col-md-6 text-right'>>\n\t\t\t<'row'<'col-md-12'tr>>\n\t\t\t<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7 dataTables_pager'>>",
+                language: {
+                    lengthMenu:     "{{'Display'|__}} _MENU_",
+                    emptyTable:     "{{'No data available in table'|__}}",
+                    info:           "{{'Showing'|__}} _START_ {{'to'|__}} _END_ {{'of'|__}} _TOTAL_ {{'entries'|__}}",
+                    infoEmpty:      "{{'Showing'|__}} 0 {{'to'|__}} 0 {{'of'|__}} 0 {{'entries'|__}}",
+                    loadingRecords: "{{'Loading'|__}}...",
+                    processing:     "{{'Processing'|__}}...",
+                    search:         "{{'Search'|__}}",
+                    infoFiltered:   "({{'filtered from'|__}} _MAX_ {{'total entries'|__}})",
+                },
+                ajax: {
+                    url: '{{url("api/translatemessages")}}',
+                    type: "POST",
+                },
+    			deferRender: true,
+    			scrollY: '500px',
+    			scrollCollapse: true,
+    			scroller: true,
+    			columns: [
+        			{% for lang in languages %}
+        				{data: '{{lang.name}}'},
+        			{% endfor %}
+    			],
+    		});
+        {% elseif this.param.page == 'backup' %}
+            table.DataTable({
+    			responsive: true,
+                dom: "<'row'<'col-md-6'><'col-md-6 text-right'>>\n\t\t\t<'row'<'col-md-12'tr>>\n\t\t\t<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7 dataTables_pager'lp>>",
+                buttons: [
+                    {extend: 'copy',exportOptions: {columns: [2,3,4,5]}},
+                    {extend: 'excel',exportOptions: {columns: [2,3,4,5]}},
+                    {extend: 'pdf',exportOptions: {columns: [2,3,4,5]}},
+                    {extend: 'print',exportOptions: {columns: [2,3,4,5]}
+                }],
+                lengthMenu: [5, 10, 25, 50],
+                pageLength: 10,
+                language: {
+                    lengthMenu: "{{'Display'|__}} _MENU_",
+                    emptyTable:     "{{'No data available in table'|__}}",
+                    info:           "{{'Showing'|__}} _START_ {{'to'|__}} _END_ {{'of'|__}} _TOTAL_ {{'entries'|__}}",
+                    infoEmpty:      "{{'Showing'|__}} 0 {{'to'|__}} 0 {{'of'|__}} 0 {{'entries'|__}}",
+                    loadingRecords: "{{'Loading'|__}}...",
+                    processing:     "{{'Processing'|__}}...",
+                    search:         "{{'Search'|__}}",
+                    infoFiltered:   "({{'filtered from'|__}} _MAX_ {{'total entries'|__}})",
+                },
+                searchDelay: 500,
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '{{url("api/backups")}}',
+                    type: "POST",
+                },
+                columns: [
+                {
+                    data: "fileInfo",
+                    'orderable':false,
+                    'render': function (data, type, full, meta){
+                        return '<a href="{{"app/uploads/panakour-backup"|media|replace({"app/media/": ""})}}/' + full.fileInfo.basename + '" download>' + full.fileInfo.basename + '</a>';
+                    }
+                },
+                {
+                    data: "size",
+                    'orderable':false,
+                    'render': function (data, type, full, meta){
+                        return full.size + ' {{"KB"|__}}';
+                    }
+                },
+                {
+                    data: "lastModified",
+                    'orderable':true
+                },
+                {
+                    data: "actions",
+                    'orderable':false
+                }],
+                columnDefs: [{
+                   'targets': -1,
+                   'searchable':false,
+                   'orderable':false,
+                   'className': 'dt-body-center',
+                   'render': function (data, type, full, meta){
+                        return '<div class="btn-group m-btn-group" role="group" aria-label="..."><button class="btn btn-danger delete_record" rel="' + full.fileInfo.basename + '" data-type="backup" ><span><i class="la la-times"></i> <span>{{"Delete"|__}}</span></span></button></div>';
+                    }
+                }]
+            });
+        {% endif %}
+
+
+
+
+
+	};
+
+	return {
+
+		//main function to initiate the module
+		init: function() {
+			initTable1();
+		},
+
+	};
+
+}();
+
+// Class definition
+var KTUserProfile = function () {
+	// Base elements
+	var avatar;
+	var offcanvas;
+
+	// Private functions
+	var initAside = function () {
+		// Mobile offcanvas for mobile mode
+		offcanvas = new KTOffcanvas('kt_user_profile_aside', {
+            overlay: true,
+            baseClass: 'kt-app__aside',
+            closeBy: 'kt_user_profile_aside_close',
+            toggleBy: 'kt_subheader_mobile_toggle'
+        });
+        $('#kt_subheader_mobile_toggle').show();
+	}
+
+	var initUserForm = function() {
+		avatar = new KTAvatar('kt_user_avatar');
+	}
+
+	return {
+		// public functions
+		init: function() {
+			initAside();
+			initUserForm();
+		}
+	};
+}();
+
+KTUtil.ready(function() {
+	KTUserProfile.init();
+
+    $( "#kt_form" ).validate({
+        ignore: ":hidden",
+        invalidHandler: function(event, validator) {
+            var alert = $('#kt-form_msg');
+            alert.removeClass('kt-hidden').show();
+            KTUtil.scrollTop();
+        },
+    });
+
+    {% if this.param.page == 'general' or this.param.page is empty %}
+        $('body').on('changed.bs.select', '#currency', function(e, clickedIndex, newValue, oldValue){
+            var selected = $(e.currentTarget).val();
+            if(selected != ''){
+                $.request('onGetCurrency', {
+                    data: {id: selected},
+                    success: function(data) {
+                        if(data.currency.place_symbol_before == true){
+                            $('#place_symbol_before').prop('checked', true);
+                        }else {
+                            $('#place_symbol_before').prop('checked', false);
+                        }
+                        if(data.currency.with_space == true){
+                            $('#with_space').prop('checked', true);
+                        }else {
+                            $('#with_space').prop('checked', false);
+                        }
+                        $('#decimal_point').val(data.currency.decimal_point);
+                        $('#thousand_separator').val(data.currency.thousand_separator);
+                        $('#initbiz_money_fraction_digits').val(data.currency.initbiz_money_fraction_digits);
+                    }
+                });
+            }
+        });
+    {% elseif this.param.page == 'company' %}
+        $("#address").geocomplete({
+            map: "#map_canvas",
+            mapOptions: {
+                zoom: 18
+            },
+            markerOptions: {
+                draggable: true
+            },
+            details: ".location-complete",
+            {% if company.lat %}
+                location: [{{company.lat}},{{company.lng}}]
+            {% endif %}
+        });
+        $("#address").bind("geocode:dragged", function(event, latLng){
+            $("input[name=lat]").val(latLng.lat());
+            $("input[name=lng]").val(latLng.lng());
+            $("#reset").show();
+        });
+
+        var input = document.getElementById('kt_tagify_2');
+        new Tagify(input);
+    {% elseif this.param.page == 'languages' or this.param.page == 'departments' or this.param.page == 'employees' %}
+        KTAppUserListDatatable.init();
+    {% elseif this.param.page == 'backup' %}
+        KTAppUserListDatatable.init();
+        $('body').on('click', '#database', function(e){
+            swal.fire({
+                title: '{{"Error"|__}}',
+                text: '{{"This feature is not allowed in demo"|__}}',
+                type: 'error',
+                buttonsStyling: false,
+                confirmButtonText: '{{"OK"|__}}',
+                confirmButtonClass: "btn btn-sm btn-bold btn-brand",
+            });
+        });
+        $('body').on('click', '#files', function(e){
+            swal.fire({
+                title: '{{"Error"|__}}',
+                text: '{{"This feature is not allowed in demo"|__}}',
+                type: 'error',
+                buttonsStyling: false,
+                confirmButtonText: '{{"OK"|__}}',
+                confirmButtonClass: "btn btn-sm btn-bold btn-brand",
+            });
+        });
+        $('body').on('click', '#whole', function(e){
+            swal.fire({
+                title: '{{"Error"|__}}',
+                text: '{{"This feature is not allowed in demo"|__}}',
+                type: 'error',
+                buttonsStyling: false,
+                confirmButtonText: '{{"OK"|__}}',
+                confirmButtonClass: "btn btn-sm btn-bold btn-brand",
+            });
+        });
+        window.onbeforeunload = function() {
+              return "Did you save your stuff?"
+        }
+    {% elseif this.param.page == 'translate' %}
+        // Activate an inline edit on click of a table cell
+        $('#kt_table_1').on( 'click', 'tbody td .translate', function (e) {
+            if($(this).find('.inline_edit').length == 0){
+                $(this).html('<input type="text" class="form-control inline_edit" value="'+$(this).html()+'" />');
+                $('.inline_edit').focus().select();
+            }
+        });
+        $('#kt_table_1').on('change', '.inline_edit', function(e){
+            var element = $(this);
+            var label = element.parent('.translate');
+            label.addClass('kt-spinner kt-spinner--right kt-spinner--sm kt-spinner--success');
+            var id = label.attr('rel');
+            var lang = label.attr('data-language');
+             $.request('onTranslate', {
+                 data: {translate: $(this).val(), lang: lang, id: id},
+                 success: function(response, status, xhr, $form) {
+                     label.removeClass('kt-spinner kt-spinner--right kt-spinner--sm kt-spinner--success');
+                     element.replaceWith(element.val());
+                 }
+             });
+        });
+        $('#kt_table_1').on('blur', '.inline_edit', function(e){
+            var element = $(this);
+            element.replaceWith(element.val());
+        });
+    	KTDatatablesExtensions.init();
+    {% endif %}
+});
+</script>
+{% endput %}

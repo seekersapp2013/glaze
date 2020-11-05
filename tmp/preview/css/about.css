@@ -1,0 +1,12 @@
+#header-search .bg {
+    background-image: url('../images/bg-17.jpg');
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;
+    opacity:1;
+}#desc-img-text-4 .bg-wrap {
+    background-color: #F4F5F6;
+}
+#footer-social-text .bg-wrap {
+    background-color: #F4F5F6;
+}

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 22.0.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 1000 1000" style="enable-background:new 0 0 1000 1000;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:none;stroke:url(#Path_3_);stroke-width:12;}
+	.st1{fill:none;stroke:#002242;stroke-width:12;}
+</style>
+<title>Untitled 2</title>
+<desc>Created with Sketch.</desc>
+<g id="builder-organize" transform="translate(167.000000, 0.000000)">
+	
+		<radialGradient id="Path_3_" cx="250.2931" cy="3.7803" r="10.7412" gradientTransform="matrix(-43.5556 -22.4479 22.4479 -43.5556 11398.3477 6329.5405)" gradientUnits="userSpaceOnUse">
+		<stop  offset="0" style="stop-color:#F74608"/>
+		<stop  offset="1" style="stop-color:#B41E3C"/>
+	</radialGradient>
+	<polyline id="Path" class="st0" points="120.8,645.8 -121.8,645.8 -121.8,158.2 674.1,158.2 674.1,645.8 489.7,645.8 	"/>
+	<path id="Shape" class="st1" d="M345.8,566.2L296,615.9l-49.7-49.7 M345.8,367.2L296,317.4l-49.7,49.7"/>
+	<path id="Path_1_" class="st1" d="M301,317.4v298.5"/>
+	<path id="Shape_1_" class="st1" d="M196.5,516.4l-49.7-49.7l49.7-49.7 M395.5,516.4l49.7-49.7L395.5,417"/>
+	<path id="Path_2_" class="st1" d="M445.3,471.6H146.8"/>
+	<path id="Shape_2_" class="st1" d="M587.2,835h78.6 M429.9,835h78.6 M272.6,835h78.6 M115.3,835h78.6 M-12.5,786.3V835h49.2
+		 M793.6,786.3V835h-49.2 M-12.5,649.8v78 M793.6,649.8v78 M793.6,493.9v78 M744.5,367.2h49.2v48.7"/>
+</g>
+</svg>

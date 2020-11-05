@@ -1,0 +1,17 @@
+1.0.1:
+    - 'Initialize plugin.'
+1.0.2:
+    - 'Created table spot_project_project'
+    - builder_table_create_spot_project_project.php
+1.0.3:
+    - 'Updated table spot_project_project'
+    - builder_table_update_spot_project_project.php
+1.0.4:
+    - 'Created table spot_project_page'
+    - builder_table_create_spot_project_page.php
+1.0.5:
+    - 'Updated table spot_project_project'
+    - builder_table_update_spot_project_project_2.php
+1.0.6:
+    - 'Updated table spot_project_project'
+    - builder_table_update_spot_project_project_3.php

@@ -1,0 +1,53 @@
+.=====================================================================.
+                                                                       
+  .d8888b.   .o8888b.  db  .d8888b.  d8888b. d88888b d8888b.  .d888b.  
+ .8P    Y8. d8P    Y8  88 .8P    Y8. 88  `8D 88'     88  `8D .8P , Y8. 
+ 88      88 8P     .ooo88 88      88 88oooY' 88oooo  88oobY' 88  |  88 
+ 88      88 8b     `~~~88 88      88 88~~~b. 88~~~~  88`8b   88  |/ 88 
+ `8b    d8' Y8b    d8  88 `8b    d8' 88   8D 88.     88 `88. `8b | d8' 
+  `Y8888P'   `Y8888P'  YP  `Y8888P'  Y8888P' Y88888P 88   YD  `Y888P'  
+                                                                       
+`========================== INSTALLATION LOG ========================='
+
+[2020/08/07 02:34:25] Host: Darwin Mohameds-Mac-Pro.local 17.7.0 Darwin Kernel Version 17.7.0: Wed May 27 17:00:02 PDT 2020; root:xnu-4570.71.80.1~1/RELEASE_X86_64 x86_64
+[2020/08/07 02:34:25] PHP version: 7.2.22
+[2020/08/07 02:34:25] Server software: Apache
+[2020/08/07 02:34:25] Operating system: Darwin
+[2020/08/07 02:34:25] Memory limit: 128M
+[2020/08/07 02:34:25] Max execution time: 3600
+.============================ POST REQUEST ==========================.
+[2020/08/07 02:34:25] Postback payload: Array
+(
+    [code] => phpVersion
+    [handler] => onCheckRequirement
+)
+
+[2020/08/07 02:34:25] System check: phpVersion
+[2020/08/07 02:34:25] Requirement phpVersion +OK
+[2020/08/07 02:34:25] Execute handler (onCheckRequirement): Array
+(
+    [result] => 1
+)
+
+.============================ POST REQUEST ==========================.
+[2020/08/07 02:34:25] Postback payload: Array
+(
+    [code] => curlLibrary
+    [handler] => onCheckRequirement
+)
+
+[2020/08/07 02:34:25] System check: curlLibrary
+[2020/08/07 02:34:25] Requirement curlLibrary +OK
+[2020/08/07 02:34:25] Execute handler (onCheckRequirement): Array
+(
+    [result] => 1
+)
+
+.============================ POST REQUEST ==========================.
+[2020/08/07 02:34:26] Postback payload: Array
+(
+    [code] => liveConnection
+    [handler] => onCheckRequirement
+)
+
+[2020/08/07 02:34:26] System check: liveConnection

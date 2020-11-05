@@ -1,0 +1,20 @@
+#header-text-2 .bg {
+    background-image: url('../images/slider-1.jpg');
+    background-repeat: no-repeat;
+    background-position: center bottom;
+    background-size: cover;
+    opacity:1;
+}#desc-img-text-4 .bg-wrap {
+    background-color: #F4F5F6;
+}
+#subscribe-text-field .bg-wrap {
+    background-color: #f4f5f6;
+}#contact-text-form .bg {
+	background-image: url('../images/bg-3.jpg');
+	background-size: cover;
+	background-repeat: no-repeat;
+	background-position: bottom right;
+	opacity: 0.15;
+}#footer-social-text .bg-wrap {
+    background-color: #F4F5F6;
+}

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="95px" height="71px" viewBox="0 0 95 71" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 62 (91390) - https://sketch.com -->
+    <title>builder-organize</title>
+    <desc>Created with Sketch.</desc>
+    <defs>
+        <radialGradient cx="100%" cy="88.5216346%" fx="100%" fy="88.5216346%" r="141.494003%" gradientTransform="translate(1.000000,0.885216),scale(0.612500,1.000000),rotate(-152.734148),translate(-1.000000,-0.885216)" id="radialGradient-1">
+            <stop stop-color="#F74608" offset="0%"></stop>
+            <stop stop-color="#B41E3C" offset="100%"></stop>
+        </radialGradient>
+    </defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="larabuilder-001" transform="translate(-816.000000, -319.000000)">
+            <g id="builder-organize" transform="translate(817.000000, 320.000000)">
+                <polyline id="Path" stroke="url(#radialGradient-1)" stroke-width="2" points="24.3902439 49 0 49 0 0 80 0 80 49 61.4634146 49"></polyline>
+                <path d="M47,41 L42,46 L37,41 M47,21 L42,16 L37,21" id="Shape" stroke="#002242"></path>
+                <line x1="42.5" y1="16" x2="42.5" y2="46" id="Path" stroke="#002242"></line>
+                <path d="M32,36 L27,31 L32,26 M52,36 L57,31 L52,26" id="Shape" stroke="#002242"></path>
+                <line x1="57" y1="31.5" x2="27" y2="31.5" id="Path" stroke="#002242"></line>
+                <path d="M71.2619048,68.0204082 L79.1666667,68.0204082 M55.452381,68.0204082 L63.3571429,68.0204082 M39.6428571,68.0204082 L47.547619,68.0204082 M23.8333333,68.0204082 L31.7380952,68.0204082 M10.9880952,63.122449 L10.9880952,68.0204082 L15.9285714,68.0204082 M92.0119048,63.122449 L92.0119048,68.0204082 L87.0714286,68.0204082 M10.9880952,49.4081633 L10.9880952,57.244898 M92.0119048,49.4081633 L92.0119048,57.244898 M92.0119048,33.7346939 L92.0119048,41.5714286 M87.0714286,21 L92.0119048,21 L92.0119048,25.8979592" id="Shape" stroke="#002242" stroke-width="2"></path>
+            </g>
+        </g>
+    </g>
+</svg>

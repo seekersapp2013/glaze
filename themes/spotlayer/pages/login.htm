@@ -1,0 +1,369 @@
+title = "Login"
+url = "/login/:code?"
+layout = "blank"
+is_hidden = 0
+role = 0
+permission = 0
+anonymous_only = 1
+logged_only = 0
+child_of = "mey_no_parent"
+hide_crumb = 0
+remove_crumb_trail = 0
+crumb_disabled = 0
+
+[viewBag]
+localeTitle[ar] = "تسجيل الدخول"
+localeUrl[ar] = "/login/:code?"
+==
+<?php
+function onStart(){
+    if(Auth::getUser()){
+        return Redirect::to('dashboard');
+    }
+
+    $this['requireActivation']      = RainLab\User\Models\Settings::get('require_activation', true);
+    $this['automaticActivation']    = RainLab\User\Models\Settings::get('activate_mode', true);
+}
+function onMyRegister()
+{
+    $data['role_id']         = 5;
+    $this['account']->onRegister();
+}
+?>
+==
+<!-- begin:: Page -->
+<div class="kt-grid kt-grid--ver kt-grid--root kt-page">
+    <div class="kt-grid kt-grid--hor kt-grid--root  kt-login kt-login--v1" id="kt_login">
+     <div class="kt-grid__item kt-grid__item--fluid kt-grid kt-grid--desktop kt-grid--ver-desktop kt-grid--hor-tablet-and-mobile">
+
+         <!--begin::Content-->
+         <div class="kt-grid__item kt-grid__item--fluid  kt-grid__item--order-tablet-and-mobile-1  kt-login__wrapper">
+
+             <!--begin::Body-->
+             <div class="kt-login__body">
+
+                 <!--begin::Signin-->
+                 <div class="kt-login__form">
+                     <div class="kt-login__title">
+                         <a class="kt-login__logo " href="{{url('/')}}">
+                             <img style="height:90px;width:auto" src="{% if settings.logo %}{{ settings.logo.path }}{% else %}./admin/media/logos/logo.svg{% endif %}">
+                         </a>
+                         <h3 class="kt-margin-t-30">{{"Sign In"|__}}</h3>
+                     </div>
+
+                     <!--begin::Form-->
+                         <form class="kt-form" action="">
+                             {{form_token()}}
+                             {{form_sessionKey()}}
+                             {% flash %}
+                                <div class="kt-alert kt-alert--outline alert alert-{% if type == 'error' %}danger{% else %}{{type}}{% endif %} alert-dismissible" role="alert">
+                                    <button type="button" class="close" data-dismiss="alert" aria-label="{{'Close'|__}}"></button>
+                                    <span>{{ message }}</span>
+                                </div>
+                             {% endflash %}
+                             <div class="form-group">
+                                 <input class="form-control" type="text" placeholder="{{ loginAttributeLabel|__ }}" name="login" id="userSigninLogin" autofocus autocomplete="new-password">
+                             </div>
+                             <div class="form-group">
+                                 <input class="form-control form-control-last" type="Password" placeholder="{{'Password'|__}}" id="userSigninPassword" name="password" autocomplete="new-password">
+                             </div>
+                             <!--begin::Action-->
+                             <div class="kt-login__actions">
+                                 {% if rememberLoginMode == 'ask' %}
+                                 <label class="kt-checkbox">
+                                     <input name="remember" type="checkbox" value="1"> {{'Remember me'|__}}
+                                     <span></span>
+                                 </label>
+                                 {% endif %}
+                                 <button id="kt_login_signin_submit" class="btn btn-primary btn-elevate kt-login__btn-primary">{{'Sign In'|__}}</button>
+                             </div>
+                         </form>
+                     <!--end::Form-->
+                 </div>
+                 <!--end::Signin-->
+             </div>
+             <!--end::Body-->
+         </div>
+         <!--end::Content-->
+     </div>
+    </div>
+</div>
+<!-- end:: Page -->
+ {% put styles %}
+     <style>
+         .kt-header__topbar-item--langs {
+             display: -webkit-box;
+             display: -ms-flexbox;
+             display: flex;
+             -webkit-box-flex: 1;
+             -ms-flex: 1;
+             flex: 1;
+             width: 100%;
+             -webkit-box-align: center;
+             -ms-flex-align: center;
+             align-items: center;
+             -webkit-box-pack: center;
+             -ms-flex-pack: center;
+             justify-content: center;
+         }
+         .kt-header__topbar-item--langs .kt-header__topbar-icon img {
+             width: 25px;
+         }
+         .kt-login__logo img {
+            width: 80px;
+        }
+        .kt-widget.kt-widget--user-profile-3 .kt-widget__bottom {
+            margin-top: 0 !important;
+            border-top: 0 !important;
+        }
+        .kt-widget.kt-widget--user-profile-3 .kt-widget__bottom .kt-widget__item {
+            padding: 1rem 1.5rem 0 0px !important;
+        }
+     </style>
+ {% endput %}
+ {% put scripts %}
+ <script type="text/javascript">
+     "use strict";
+
+    // Class Definition
+    var KTLoginGeneral = function() {
+
+        var login = $('#kt_login');
+
+        var showErrorMsg = function(form, type, msg) {
+            var alert = $('<div class="kt-alert kt-alert--outline alert alert-' + type + ' alert-dismissible" role="alert">\
+    			<button type="button" class="close" data-dismiss="alert" aria-label="Close"></button>\
+    			<span></span>\
+    		</div>');
+
+            form.find('.alert').remove();
+            alert.prependTo(form);
+            //alert.animateClass('fadeIn animated');
+            KTUtil.animateClass(alert[0], 'fadeIn animated');
+            alert.find('span').html(msg);
+        }
+
+        // Private Functions
+        var displaySignUpForm = function() {
+            login.removeClass('kt-login--forgot');
+            login.removeClass('kt-login--signin');
+
+            login.addClass('kt-login--signup');
+            KTUtil.animateClass(login.find('.kt-login__signup')[0], 'flipInX animated');
+        }
+
+        var displaySignInForm = function() {
+            login.removeClass('kt-login--forgot');
+            login.removeClass('kt-login--signup');
+
+            login.addClass('kt-login--signin');
+            KTUtil.animateClass(login.find('.kt-login__signin')[0], 'flipInX animated');
+            //login.find('.kt-login__signin').animateClass('flipInX animated');
+        }
+
+        var displayForgotForm = function() {
+            login.removeClass('kt-login--signin');
+            login.removeClass('kt-login--signup');
+
+            login.addClass('kt-login--forgot');
+            //login.find('.kt-login--forgot').animateClass('flipInX animated');
+            KTUtil.animateClass(login.find('.kt-login__forgot')[0], 'flipInX animated');
+
+        }
+
+        var handleFormSwitch = function() {
+            $('#kt_login_forgot').on('click', function(e) {
+                e.preventDefault();
+                displayForgotForm();
+            });
+
+            $('#kt_login_forgot_cancel').on('click', function(e) {
+                e.preventDefault();
+                displaySignInForm();
+            });
+
+            $('#kt_login_signup').on('click', function(e) {
+                e.preventDefault();
+                displaySignUpForm();
+            });
+
+            $('#kt_login_signup_cancel').on('click', function(e) {
+                e.preventDefault();
+                displaySignInForm();
+            });
+        }
+
+        var handleSignInFormSubmit = function() {
+            $('#kt_login_signin_submit').on('click', function(e) {
+                e.preventDefault();
+                var btn = $(this);
+                var form = $(this).closest('form');
+
+                form.validate({
+                    rules: {
+                        login: {
+                            required: true
+                        },
+                        password: {
+                            required: true
+                        }
+                    },
+                    messages: {
+                        "login": {
+                            required: '{{"This field is required!"|__}}',
+                        },
+                        "password": {
+                            required: '{{"This field is required!"|__}}',
+                        },
+                    }
+                });
+
+                if (!form.valid()) {
+                    return;
+                }
+
+                btn.addClass('kt-spinner kt-spinner--right kt-spinner--sm kt-spinner--light').attr('disabled', true);
+
+
+                $.request('onSignin', {
+                    data: {login: $('#userSigninLogin').val(), password: $('#userSigninPassword').val()},
+                    error: function(e,response) {
+                        btn.removeClass('kt-spinner kt-spinner--right kt-spinner--sm kt-spinner--light').attr('disabled', false);                        if(typeof e.responseJSON !== 'undefined'){
+                            showErrorMsg(form, 'danger', e.responseJSON.X_OCTOBER_ERROR_MESSAGE);
+                        }else{
+                            showErrorMsg(form, 'danger', e.responseText);
+                        }
+                    },
+                    success: function(response, status, xhr, $form) {
+                    	// similate 2s delay
+                    	setTimeout(function() {
+    	                    btn.removeClass('kt-spinner kt-spinner--right kt-spinner--sm kt-spinner--light').attr('disabled', false);
+                           showErrorMsg(form, 'success', '{{"Correct, you are being redirect"|__}}.');
+                           location.href = "{{url('dashboard')}}";
+                        }, 2000);
+                    }
+                });
+            });
+        }
+
+        var handleSignUpFormSubmit = function() {
+            $('#kt_login_signup_submit').on('click', function(e) {
+                e.preventDefault();
+
+                var btn = $(this);
+                var form = $(this).closest('form');
+
+                form.validate({
+                    rules: {
+                        fullname: {
+                            required: true
+                        },
+                        email: {
+                            required: true,
+                            email: true
+                        },
+                        password: {
+                            required: true
+                        },
+                        rpassword: {
+                            required: true
+                        },
+                        agree: {
+                            required: true
+                        }
+                    }
+                });
+
+                if (!form.valid()) {
+                    return;
+                }
+
+                btn.addClass('kt-spinner kt-spinner--right kt-spinner--sm kt-spinner--light').attr('disabled', true);
+
+                $.request('onRegister', {
+                    {% if loginAttribute == "username" %}
+                        data: {name: $('#registerName').val(), email: $('#registerEmail').val(), username: $('#registerUsername').val(), password: $('#registerPassword').val(), password_confirmation: $('#rpassword').val()},
+                    {% else %}
+                        data: {name: $('#registerName').val(), email: $('#registerEmail').val(), password: $('#registerPassword').val(), password_confirmation: $('#rpassword').val()},
+                    {% endif %}
+                    error: function(e,response) {
+                        btn.removeClass('kt-spinner kt-spinner--right kt-spinner--sm kt-spinner--light').attr('disabled', false);
+                        showErrorMsg(form, 'danger', e.responseJSON.X_OCTOBER_ERROR_MESSAGE);
+                    },
+                    success: function(response, status, xhr, $form) {
+                    	// similate 2s delay
+                    	setTimeout(function() {
+    	                    btn.removeClass('kt-spinner kt-spinner--right kt-spinner--sm kt-spinner--light').attr('disabled', false);
+                            {% if (requireActivation and automaticActivation is null) %}
+    	                       showErrorMsg(form, 'success', '{{"Thank you. To complete your registration please check your email"|__}}.');
+                            {% else %}
+                               showErrorMsg(form, 'success', '{{"Correct, you are being redirect"|__}}.');
+                               location.href = "{{url('dashboard')}}";
+                           {% endif %}
+                        }, 2000);
+                    }
+                });
+            });
+        }
+
+        var handleForgotFormSubmit = function() {
+            $('#kt_login_forgot_submit').on('click', function(e) {
+                e.preventDefault();
+
+                var btn = $(this);
+                var form = $(this).closest('form');
+
+                form.validate({
+                    rules: {
+                        email: {
+                            required: true,
+                            email: true
+                        }
+                    }
+                });
+
+                if (!form.valid()) {
+                    return;
+                }
+
+                btn.addClass('kt-spinner kt-spinner--right kt-spinner--sm kt-spinner--light').attr('disabled', true);
+
+                $.request('onRestorePassword', {
+                    data: {email: $('#userRestoreEmail').val()},
+                    error: function(e,response) {
+                        btn.removeClass('kt-spinner kt-spinner--right kt-spinner--sm kt-spinner--light').attr('disabled', false);
+                        showErrorMsg(form, 'danger', e.responseJSON.X_OCTOBER_ERROR_MESSAGE);
+                    },
+                    success: function(response, status, xhr, $form) {
+                    	// similate 2s delay
+                    	setTimeout(function() {
+	                           btn.removeClass('kt-spinner kt-spinner--right kt-spinner--sm kt-spinner--light').attr('disabled', false);
+                               showErrorMsg(form, 'success', '{{"Cool! Password recovery instruction has been sent to your email"|__}}.');
+                        }, 2000);
+                    }
+                });
+            });
+        }
+
+        // Public Functions
+        return {
+            // public functions
+            init: function() {
+                handleFormSwitch();
+                handleSignInFormSubmit();
+                handleSignUpFormSubmit();
+                handleForgotFormSubmit();
+            }
+        };
+    }();
+
+     // Class Initialization
+     KTUtil.ready(function () {
+         KTLoginGeneral.init();
+         $('body').on('click','#agree', function(e){
+             $( "#agreement" ).prop( "checked", true );
+         });
+
+     });
+ </script>
+ {% endput %}

@@ -1,0 +1,265 @@
+title = "Dashboard"
+daterange = 0
+url = "/dashboard"
+layout = "admin"
+description = "Overview on your system"
+is_hidden = 0
+role = 0
+permission = 0
+anonymous_only = 0
+logged_only = 1
+child_of = "mey_no_parent"
+hide_crumb = 1
+remove_crumb_trail = 0
+crumb_disabled = 0
+
+[viewBag]
+==
+<?php
+    function onStart(){
+        $records                    =   \Spot\Project\Models\Project::orderBy('id', 'desc');
+        if(Auth::getUser()->role_id != 1) {
+            $records    =   $records->where('user_id', Auth::getUser()->id);
+        }
+
+        $pending                    =   $records->where('published_at',null)->count();
+        $downloaded                 =   $records->where('published_at','!=', null)->count();
+        $projects                   =   \Spot\Project\Models\Project::orderBy('id', 'desc')->get();
+
+        if(Auth::getUser()->role_id != 1) {
+            $projects    =   $projects->where('user_id', Auth::getUser()->id);
+        }
+        $this['pending']            =   $pending;
+        $this['downloaded']         =   $downloaded;
+        $this['projects']           =   $projects;
+    }
+    function onDelete()
+    {
+        $data = post();
+        if(!Auth::getUser()->hasUserPermission(["project"],'d')) {
+            return Response::json(['error' => $this['theme_lang']['not_allowed']], 401);
+        }
+
+        if(null !== post('id')){
+            $model = \Spot\Project\Models\Project::find($data['id']);
+            $model->file->delete();
+            $model->delete();
+        }
+    }
+?>
+==
+<!--Begin::Section-->
+<div class="row">
+    <div class="col-xl-12">
+        <!--begin:: Widgets/Applications/User/Profile3-->
+        <div class="kt-portlet kt-portlet--height-fluid">
+            <div class="kt-portlet__body">
+                <div class="kt-widget kt-widget--user-profile-3">
+                    <div class="kt-widget__top">
+                        {% if user.avatar %}
+                            <div class="kt-widget__media">
+                                <img src="{{user.avatar.thumb(100, 100,'crop')}}" alt="image">
+                            </div>
+                       {% else %}
+                            <div class="kt-widget__pic kt-widget__pic--brand kt-font-boldest kt-font-light">
+                                {{user.name|upper|slice(0,2)}}
+                            </div>
+                       {% endif %}
+                        <div class="kt-widget__content">
+                            <div class="kt-widget__head">
+                                <a href="javascript:;" class="kt-widget__username">
+                                    {{user.name|capitalize}}
+                                </a>
+
+                                <div class="kt-widget__action">
+                                    <a href="{{url('dashboard/account/edit')}}" class="btn btn-brand btn-sm btn-upper">{{'Edit'|__}}</a>
+                                </div>
+                            </div>
+
+                            <div class="kt-widget__subhead">
+                                {% if user.mobile %}
+                                    <a href="javascript:;"><i class="flaticon-alarm-1"></i>{{user.mobile}}</a>
+                                {% elseif user.email %}
+                                    <a href="javascript:;"><i class="flaticon2-new-email"></i>{{user.email}}</a>
+                                {% else %}
+                                    <a href="javascript:;"><i class="flaticon-user-settings"></i>{{user.username}}</a>
+                                {% endif %}
+                                <a href="javascript:;"><i class="flaticon2-calendar-3"></i>{{user.role.name}} </a>
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class="kt-widget__bottom">
+                        <a href="javascript:;" class="kt-widget__item">
+                            <div class="kt-widget__icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1" class="kt-svg-icon">
+                                    <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+                                        <polygon points="0 0 24 0 24 24 0 24"/>
+                                        <path d="M18.5,8 C17.1192881,8 16,6.88071187 16,5.5 C16,4.11928813 17.1192881,3 18.5,3 C19.8807119,3 21,4.11928813 21,5.5 C21,6.88071187 19.8807119,8 18.5,8 Z M18.5,21 C17.1192881,21 16,19.8807119 16,18.5 C16,17.1192881 17.1192881,16 18.5,16 C19.8807119,16 21,17.1192881 21,18.5 C21,19.8807119 19.8807119,21 18.5,21 Z M5.5,21 C4.11928813,21 3,19.8807119 3,18.5 C3,17.1192881 4.11928813,16 5.5,16 C6.88071187,16 8,17.1192881 8,18.5 C8,19.8807119 6.88071187,21 5.5,21 Z" fill="#000000" opacity="0.3"/>
+                                        <path d="M5.5,8 C4.11928813,8 3,6.88071187 3,5.5 C3,4.11928813 4.11928813,3 5.5,3 C6.88071187,3 8,4.11928813 8,5.5 C8,6.88071187 6.88071187,8 5.5,8 Z M11,4 L13,4 C13.5522847,4 14,4.44771525 14,5 C14,5.55228475 13.5522847,6 13,6 L11,6 C10.4477153,6 10,5.55228475 10,5 C10,4.44771525 10.4477153,4 11,4 Z M11,18 L13,18 C13.5522847,18 14,18.4477153 14,19 C14,19.5522847 13.5522847,20 13,20 L11,20 C10.4477153,20 10,19.5522847 10,19 C10,18.4477153 10.4477153,18 11,18 Z M5,10 C5.55228475,10 6,10.4477153 6,11 L6,13 C6,13.5522847 5.55228475,14 5,14 C4.44771525,14 4,13.5522847 4,13 L4,11 C4,10.4477153 4.44771525,10 5,10 Z M19,10 C19.5522847,10 20,10.4477153 20,11 L20,13 C20,13.5522847 19.5522847,14 19,14 C18.4477153,14 18,13.5522847 18,13 L18,11 C18,10.4477153 18.4477153,10 19,10 Z" fill="#000000"/>
+                                    </g>
+                                </svg>
+                            </div>
+                            <div class="kt-widget__details">
+                                <span class="kt-widget__title">{{pending}} {{'project'|__}}</span>
+                                <span class="kt-widget__value">{{'Saved Projects'|__}}</span>
+                            </div>
+                        </a>
+
+                        <a href="javascript:;" class="kt-widget__item">
+                            <div class="kt-widget__icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1" class="kt-svg-icon">
+                                    <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+                                        <polygon points="0 0 24 0 24 24 0 24"/>
+                                        <path d="M10.4289322,12.3786797 L5.30761184,7.25735931 C4.91708755,6.86683502 4.91708755,6.23367004 5.30761184,5.84314575 C5.69813614,5.45262146 6.33130112,5.45262146 6.72182541,5.84314575 L11.8431458,10.9644661 L18.0355339,4.77207794 C18.4260582,4.38155365 19.0592232,4.38155365 19.4497475,4.77207794 C19.8402718,5.16260223 19.8402718,5.79576721 19.4497475,6.1862915 L13.2573593,12.3786797 L19.4497475,18.5710678 C19.8402718,18.9615921 19.8402718,19.5947571 19.4497475,19.9852814 C19.0592232,20.3758057 18.4260582,20.3758057 18.0355339,19.9852814 L11.8431458,13.7928932 L6.72182541,18.9142136 C6.33130112,19.3047379 5.69813614,19.3047379 5.30761184,18.9142136 C4.91708755,18.5236893 4.91708755,17.8905243 5.30761184,17.5 L10.4289322,12.3786797 Z" fill="#000000" opacity="0.3" transform="translate(12.378680, 12.378680) rotate(-315.000000) translate(-12.378680, -12.378680) "/>
+                                        <path d="M3.51471863,12 L5.63603897,14.1213203 C6.02656326,14.6736051 6.02656326,15.1450096 5.63603897,15.5355339 C5.24551468,15.9260582 4.77411016,15.9260582 4.22182541,15.5355339 L0.686291501,12 L4.22182541,8.46446609 C4.69322993,7.99306157 5.16463445,7.99306157 5.63603897,8.46446609 C6.10744349,8.93587061 6.10744349,9.40727514 5.63603897,9.87867966 L3.51471863,12 Z M12,20.4852814 L14.1213203,18.363961 C14.6736051,17.9734367 15.1450096,17.9734367 15.5355339,18.363961 C15.9260582,18.7544853 15.9260582,19.2258898 15.5355339,19.7781746 L12,23.3137085 L8.46446609,19.7781746 C7.99306157,19.3067701 7.99306157,18.8353656 8.46446609,18.363961 C8.93587061,17.8925565 9.40727514,17.8925565 9.87867966,18.363961 L12,20.4852814 Z M20.4852814,12 L18.363961,9.87867966 C17.9734367,9.32639491 17.9734367,8.85499039 18.363961,8.46446609 C18.7544853,8.0739418 19.2258898,8.0739418 19.7781746,8.46446609 L23.3137085,12 L19.7781746,15.5355339 C19.3067701,16.0069384 18.8353656,16.0069384 18.363961,15.5355339 C17.8925565,15.0641294 17.8925565,14.5927249 18.363961,14.1213203 L20.4852814,12 Z M12,3.51471863 L9.87867966,5.63603897 C9.32639491,6.02656326 8.85499039,6.02656326 8.46446609,5.63603897 C8.0739418,5.24551468 8.0739418,4.77411016 8.46446609,4.22182541 L12,0.686291501 L15.5355339,4.22182541 C16.0069384,4.69322993 16.0069384,5.16463445 15.5355339,5.63603897 C15.0641294,6.10744349 14.5927249,6.10744349 14.1213203,5.63603897 L12,3.51471863 Z" fill="#000000" fill-rule="nonzero"/>
+                                    </g>
+                                </svg>
+                            </div>
+                            <div class="kt-widget__details">
+                                <span class="kt-widget__title">{{downloaded}} {{'project'|__}}</span>
+                                <span class="kt-widget__value">{{'Downloaded Projects'|__}}</span>
+                            </div>
+                        </a>
+
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--end:: Widgets/Applications/User/Profile3-->
+    </div>
+</div>
+<!--End::Section-->
+<div class="row">
+    {% for project in projects %}
+        <div class="col-lg-3">
+            <div class="kt-portlet kt-portlet--height-fluid">
+                <div class="kt-portlet__body kt-portlet__body--fit">
+                    <!--begin::Widget -->
+                    <div class="kt-widget kt-widget--project-1">
+                        <div class="kt-widget__head">
+                            <div class="kt-widget__label">
+                                <div class="kt-widget__info">
+                                    <a href="javascript:;" class="kt-widget__title">
+                                        {{project.name|capitalize}}
+                                    </a>
+                                    <span class="kt-widget__desc">
+                                        {{project.updated_at|date("d/m/Y")}} | <b>{{'By'|__}}:</b> {{project.user.name|capitalize}}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="kt-widget__footer">
+                            <div class="kt-widget__wrapper">
+                                <div class="kt-widget__section kt-align-right">
+                                    {% if user.hasUserPermission('project', 'u') %}
+                                        <a href="{{'dashboard/project-update'|page({'id': project.id})}}" class="btn btn-brand btn-sm btn-upper btn-bold">{{'Edit'|__}}</a>&nbsp;
+                                    {% endif %}
+                                    {% if user.hasUserPermission('project', 'd') %}
+                                        <button type="button" class="btn btn-danger btn-sm btn-upper btn-bold delete_project" rel="{{project.id}}">{{'Delete'|__}}</button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!--end::Widget -->
+                </div>
+            </div>
+            <!--end:: Portlet-->
+        </div>
+    {% else %}
+        <div class="col-lg-12">
+            <div class="kt-portlet kt-bg-warning kt-portlet--skin-solid kt-portlet--height-fluid">
+            	<div class="kt-portlet__head kt-portlet__head--noborder">
+            		<div class="kt-portlet__head-label">
+            			<h3 class="kt-portlet__head-title">
+            				{{'Announcement'|__}}
+            			</h3>
+            		</div>
+            	</div>
+            	<div class="kt-portlet__body">
+            		<!--begin::Widget 7-->
+            		<div class="kt-widget7 kt-widget7--skin-light">
+                        {% if user.hasUserPermission('project', 'c') %}
+                			<div class="kt-widget7__desc  kt-margin-t-20">
+                				{{'There is no projects created yet, you can create a new project from this button'|__}}.
+                			</div>
+                			<div class="kt-widget7__button">
+                                <a href="{{'dashboard/project-create'|page}}" class="btn btn-label-brand btn-sm btn-upper">
+                                    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="15px" height="15px" viewBox="0 0 30 30" version="1.1" class="kt-svg-icon kt-svg-icon--light">
+                                        <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+                                            <rect id="bound" x="0" y="0" width="15" height="15"/>
+                                            <circle id="Oval-5" fill="#000000" opacity="0.3" cx="12" cy="12" r="10"/>
+                                            <path d="M11,11 L11,7 C11,6.44771525 11.4477153,6 12,6 C12.5522847,6 13,6.44771525 13,7 L13,11 L17,11 C17.5522847,11 18,11.4477153 18,12 C18,12.5522847 17.5522847,13 17,13 L13,13 L13,17 C13,17.5522847 12.5522847,18 12,18 C11.4477153,18 11,17.5522847 11,17 L11,13 L7,13 C6.44771525,13 6,12.5522847 6,12 C6,11.4477153 6.44771525,11 7,11 L11,11 Z" id="Combined-Shape" fill="#000000"/>
+                                        </g>
+                                    </svg>
+                                     <span>{{'New Project'|__}}</span>
+                                 </a>
+                			</div>
+                        {% else %}
+                            <div class="kt-widget7__desc  kt-margin-t-20 kt-margin-b-40">
+                                {{'There is no projects created for this user'|__}}.
+                            </div>
+                        {% endif %}
+            		</div>
+            		<!--end::Widget 7-->
+            	</div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+
+{% put scripts %}
+<script type="text/javascript">
+    KTUtil.ready(function () {
+        $('body').on('click','.delete_project',function(){
+            var id      = $(this).attr('rel');
+            swal.fire({
+                buttonsStyling: false,
+
+                text: "{{'Are you sure to delete this item ?'|__}}",
+                type: "danger",
+
+                confirmButtonText: "{{'Yes, delete!'|__}}",
+                confirmButtonClass: "btn btn-sm btn-bold btn-danger",
+
+                showCancelButton: true,
+                cancelButtonText: '{{"No, cancel"|__}}',
+                cancelButtonClass: "btn btn-sm btn-bold btn-brand"
+            }).then(function (result) {
+                if (result.value) {
+                    $.request('onDelete', {
+                        data: {id: id},
+                        success: function(data) {
+
+                            swal.fire({
+                                title: '{{"Deleted!"|__}}',
+                                text: '{{"Your selected record has been deleted! :("|__}}',
+                                type: 'success',
+                                buttonsStyling: false,
+                                confirmButtonText: '{{"OK"|__}}',
+                                confirmButtonClass: "btn btn-sm btn-bold btn-brand",
+                            });
+                            location.reload();
+                        }
+                    });
+                    // result.dismiss can be 'cancel', 'overlay',
+                    // 'close', and 'timer'
+                } else if (result.dismiss === 'cancel') {
+                    swal.fire({
+                        title: '{{"Cancelled"|__}}',
+                        text: '{{"You selected record has not been deleted! :)"|__}}',
+                        type: 'error',
+                        buttonsStyling: false,
+                        confirmButtonText: '{{"OK"|__}}',
+                        confirmButtonClass: "btn btn-sm btn-bold btn-brand",
+                    });
+                }
+            });
+        });
+    });
+</script>
+{% endput %}
